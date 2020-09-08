@@ -177,6 +177,66 @@ def residueToResFragmentDistance_rotamer ( res, resFrag ):
     ### Done
     return                                            ( rmsdDist )
 
+######################################################
+# residueToResFragmentDistance_direct ()
+def residueToResFragmentDistance_direct ( res, fragInfo ):
+    """
+    This function computes the procrustes optimal overlay of XXX ... XXX and then proceeds to obtain the RMSD of these atoms.
+
+    Parameters
+    ----------
+    list : res
+        A list containing the positions and names of the compared residue atoms.
+        
+    list : fragInfo
+        A list containing the positions and names of the hydrated frament atoms.
+
+    Returns
+    -------
+    float : dist
+        The RMSD distance between the supplied residue and fragment atoms.
+
+    """
+    ### Initialise variables
+    resAtoms                                          = []
+    fragAtoms                                         = []
+
+    ### Get residue positions in same order as fragment
+    for fIt in range ( 0, len ( fragInfo ) ):
+    
+        # For each residue atom name
+        for atIt in range ( 0, len ( res[1] ) ):
+        
+            # Compare the atom names
+            if res[1][atIt][0] == fragInfo[fIt][0]:
+            
+                # Save atoms in same order
+                resAtoms.append                       ( [ res[1][atIt][1], res[1][atIt][2], res[1][atIt][3] ] )
+                fragAtoms.append                      ( [ fragInfo[fIt][1], fragInfo[fIt][2], fragInfo[fIt][3] ] )
+    
+    ### Check for missing atoms
+    if len ( fragInfo ) != len ( resAtoms ):
+        solvate_log.writeLog                          ( "!!! ERROR !!! Failed to match the fragment atoms of fragment " + str ( fragInfo ) + " to residue " + str( res ), 0 )
+    
+        # Terminate
+        solvate_log.endLog                            ( )
+        
+
+    ### Convert to numpy arrays
+    resNumpy                                          = numpy.array ( [ numpy.array ( xi ) for xi in resAtoms ] )
+    fraNumpy                                          = numpy.array ( [ numpy.array ( xi ) for xi in fragAtoms ] )
+    
+    ### Compute procrustes analysis
+    ( dist, z, t )                                    = procrustes ( resNumpy, fraNumpy )
+    
+    ### Get RMSD
+    rmsdDist                                          = getRMSD ( resAtoms, z )
+    
+    ### Report log
+    solvate_log.writeLog                              ( "Found residue to hydrated fragment distance of " + str( rmsdDist ), 4 )
+    
+    ### Done
+    return                                            ( rmsdDist )
 
 ######################################################
 # procrustes ()

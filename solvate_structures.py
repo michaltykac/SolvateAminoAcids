@@ -23,6 +23,7 @@
 
 import sys                                            ### In the case complete stop is needed
 import os                                             ### Checking for file existence
+import glob                                           ### Listing all files in folder
 import gemmi                                          ### Library of choice for structure reading/writing
 
 import solvate_globals                                ### Global variables
@@ -184,3 +185,107 @@ def readFragment ( fragPath ):
               
     ### Done
     return                                            ( protein, waters )
+
+######################################################
+# getAllResidueFragments ()
+def getAllResidueFragments ( ):
+    """
+    This function reads in all hydrated residue fragments from the supplied folder and parses these into
+    format readily accessible by solvate.
+
+    Parameters
+    ----------
+    NONE
+
+    Returns
+    -------
+    dictionary : ret
+        This dictionary contains all files as keys to sub-dictionaries, which have two keys each, waters and protein. These
+        hold the atom data for the respective atoms.
+
+    """
+    ### Initialise variables
+    ret                                               = {}
+    
+    ### Report progress
+    solvate_log.writeLog                              ( "Starting residue fragment reading from path " + str( solvate_globals._resInputDir ) + ".", 2 )
+    
+    ### Find all input hydrated residue files
+    allFragFiles                                      = [ fr for fr in glob.glob ( os.path.join ( os.path.join ( solvate_globals._resInputDir, "*" ), "*.pdb" ), recursive = True ) ]
+    
+    ### If no frags, this is probably an error
+    if len ( allFragFiles ) == 0:
+        # Print error
+        solvate_log.writeLog                          ( "!!! ERROR !!! Could not find any hydrated residues. Please use the --res option to supply the path to the hydrated residues folder location.", 0 )
+        
+        # Terminate
+        solvate_log.endLog                            ( )
+        
+    ### Read in all residue fragments
+    for frag in allFragFiles:
+            
+        # Read it in
+        ( protein, waters )                           = readFragment ( frag )
+        
+        # Save it
+        ret[frag]                                     = {}
+        ret[frag]["protein"]                          = protein
+        ret[frag]["waters"]                           = waters
+        
+    ### Report progress
+    solvate_log.writeLog                              ( "Residue fragments parsed.", 3 )
+    
+    ### Done
+    return                                            ( ret )
+
+######################################################
+# getAllFragmentFragments ()
+def getAllFragmentFragments ( ):
+    """
+    This function reads in all hydrated fragments from the supplied folder and parses these into
+    format readily accessible by solvate.
+
+    Parameters
+    ----------
+    NONE
+
+    Returns
+    -------
+    dictionary : ret
+        This dictionary contains all files as keys to sub-dictionaries, which have two keys each, waters and protein. These
+        hold the atom data for the respective atoms.
+
+    """
+    ### Initialise variables
+    ret                                               = {}
+    
+    ### Report progress
+    solvate_log.writeLog                              ( "Starting fragment reading from path " + str( solvate_globals._fragInputDir ) + ".", 2 )
+    
+    ### Find all input hydrated residue files
+    allFragFiles                                      = [ fr for fr in glob.glob ( os.path.join ( os.path.join ( solvate_globals._fragInputDir, "*" ), "*.pdb" ), recursive = True ) ]
+    
+    ### If no frags, this is probably an error
+    if len ( allFragFiles ) == 0:
+        # Print error
+        solvate_log.writeLog                          ( "!!! ERROR !!! Could not find any hydrated fragments. Please use the --frag option to supply the path to the hydrated fragments folder location.", 0 )
+        
+        # Terminate
+        solvate_log.endLog                            ( )
+        
+    ### Read in all residue fragments
+    for frag in allFragFiles:
+            
+        # Read it in
+        ( protein, waters )                           = readFragment ( frag )
+        
+        # Save it
+        ret[frag]                                     = {}
+        ret[frag]["protein"]                          = protein
+        ret[frag]["waters"]                           = waters
+        
+    ### Report progress
+    solvate_log.writeLog                              ( "Fragments parsed.", 3 )
+    
+    ### Done
+    return                                            ( ret )
