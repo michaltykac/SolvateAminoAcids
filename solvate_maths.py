@@ -43,8 +43,9 @@ def residueToResFragmentDistance_backbone ( res, resFrag ):
 
     Returns
     -------
-    float : dist
-        The RMSD distance between the supplied residues's backbone atoms.
+    list : dist, tForm
+        First element: The RMSD distance between the supplied residues's side-chain atoms
+        Second element: The dictionary of procrustes transformations.
 
     """
     ### Reduce residue to N, Ca, C and O (backbone) atoms
@@ -90,7 +91,7 @@ def residueToResFragmentDistance_backbone ( res, resFrag ):
     solvate_log.writeLog                              ( "Found residue to hydrated residue fragment distance of " + str( rmsdDist ), 4 )
     
     ### Done
-    return                                            ( rmsdDist )
+    return                                            ( rmsdDist, t )
     
 ######################################################
 # residueToResFragmentDistance_rotamer ()
@@ -109,8 +110,9 @@ def residueToResFragmentDistance_rotamer ( res, resFrag ):
 
     Returns
     -------
-    float : dist
-        The RMSD distance between the supplied residues's side-chain atoms.
+    list : dist, tForm
+        First element: The RMSD distance between the supplied residues's side-chain atoms
+        Second element: The dictionary of procrustes transformations.
 
     """
     ### Initialise variables
@@ -175,13 +177,14 @@ def residueToResFragmentDistance_rotamer ( res, resFrag ):
     solvate_log.writeLog                              ( "Found residue to hydrated residue fragment distance of " + str( rmsdDist ), 4 )
     
     ### Done
-    return                                            ( rmsdDist )
+    return                                            ( rmsdDist, t )
 
 ######################################################
 # residueToResFragmentDistance_direct ()
 def residueToResFragmentDistance_direct ( res, fragInfo ):
     """
-    This function computes the procrustes optimal overlay of XXX ... XXX and then proceeds to obtain the RMSD of these atoms.
+    This function computes the procrustes optimal overlay of all available atoms
+    and then proceeds to obtain the RMSD of these atoms.
 
     Parameters
     ----------
@@ -193,8 +196,9 @@ def residueToResFragmentDistance_direct ( res, fragInfo ):
 
     Returns
     -------
-    float : dist
-        The RMSD distance between the supplied residue and fragment atoms.
+    list : dist, tForm
+        First element: The RMSD distance between the supplied residues's side-chain atoms
+        Second element: The dictionary of procrustes transformations.
 
     """
     ### Initialise variables
@@ -236,7 +240,7 @@ def residueToResFragmentDistance_direct ( res, fragInfo ):
     solvate_log.writeLog                              ( "Found residue to hydrated fragment distance of " + str( rmsdDist ), 4 )
     
     ### Done
-    return                                            ( rmsdDist )
+    return                                            ( rmsdDist, t )
 
 ######################################################
 # procrustes ()
@@ -402,8 +406,8 @@ def findSmallestDistance ( distances, threshold ):
     
     ### Find the best match (lowest distance)
     for val in distances:
-        if ( val < minVal ) and ( val < threshold ):
-            minVal                                    = val
+        if ( val[0] < minVal ) and ( val[0] < threshold ):
+            minVal                                    = val[0]
             minInd                                    = indCtr
         indCtr                                       += 1
     
@@ -437,7 +441,7 @@ def findPassingDistances ( distances, threshold ):
     
     ### Find all passing distances
     for val in distances:
-        if val < threshold:
+        if val[0] < threshold:
             minInd.append                             ( indCtr )
         indCtr                                       += 1
         
