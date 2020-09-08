@@ -27,8 +27,8 @@ import solvate_globals                                ### Global variables
 import solvate_log                                    ### For writing the log
 
 ######################################################
-# residueToResFragmentDistance ()
-def residueToResFragmentDistance ( res, resFrag ):
+# residueToResFragmentDistance_backbone ()
+def residueToResFragmentDistance_backbone ( res, resFrag ):
     """
     This function computes the procrustes optimal overlay of the backbone atoms of the input residue and
     hydrated residue fragment and then proceeds to obtain the RMSD of these backbone atoms.
@@ -57,7 +57,6 @@ def residueToResFragmentDistance ( res, resFrag ):
 
     ### Sanity check
     if len( resAts ) != 4:
-        print                                         ( "!!! ERROR !!! Could not find all backbone atoms (C, CA, N and O) in the residue described by " + str( res ) )
         solvate_log.writeLog                          ( "!!! ERROR !!! Could not find all backbone atoms (C, CA, N and O) in the residue described by " + str( res ), 0 )
         
         # Terminate
@@ -72,7 +71,6 @@ def residueToResFragmentDistance ( res, resFrag ):
         
     ### Sanity check
     if len( fraAts ) != 4:
-        print ( "!!! ERROR !!! Could not find all backbone atoms (C, CA, N and O) in the supplied hydrated fragment " + str ( resFrag ) )
         solvate_log.writeLog                          ( "!!! ERROR !!! Could not find all backbone atoms (C, CA, N and O) in the supplied hydrated fragment " + str ( resFrag ), 0 )
         
         # Terminate
@@ -93,6 +91,92 @@ def residueToResFragmentDistance ( res, resFrag ):
     
     ### Done
     return                                            ( rmsdDist )
+    
+######################################################
+# residueToResFragmentDistance_rotamer ()
+def residueToResFragmentDistance_rotamer ( res, resFrag ):
+    """
+    This function computes the procrustes optimal overlay of the side-chain atoms of the input residue and
+    hydrated residue fragment and then proceeds to obtain the RMSD of these side-chain atoms.
+
+    Parameters
+    ----------
+    list : res
+        A list containing the positions and names of the compared residue atoms.
+        
+    list : resFrag
+        A list containing the positions and names of the hydrated residue frament atoms.
+
+    Returns
+    -------
+    float : dist
+        The RMSD distance between the supplied residues's side-chain atoms.
+
+    """
+    ### Initialise variables
+    resAts                                            = []
+    resAtsNames                                       = []
+    fraAts                                            = []
+    
+    ### Parse out the side-chain atoms for the residue
+    for rIt in range( 0, len( res[1] ) ):
+    
+        # Deal with various atom names and lengths for different amino acids
+        if ( ( ( res[0] == "VAL" ) or ( res[0] == "ILE" ) ) and ( ( res[1][rIt][0] == "C" ) or ( res[1][rIt][0] == "CA" ) or ( res[1][rIt][0] == "CB" ) or ( res[1][rIt][0] == "CG1" ) ) ) or \
+           ( ( ( res[0] == "THR" )                        ) and ( ( res[1][rIt][0] == "C" ) or ( res[1][rIt][0] == "CA" ) or ( res[1][rIt][0] == "CB" ) or ( res[1][rIt][0] == "OG1" ) ) ) or \
+           ( ( ( res[0] == "SER" )                        ) and ( ( res[1][rIt][0] == "C" ) or ( res[1][rIt][0] == "CA" ) or ( res[1][rIt][0] == "CB" ) or ( res[1][rIt][0] == "OG"  ) ) ) or \
+           ( ( ( res[0] == "CYS" )                        ) and ( ( res[1][rIt][0] == "C" ) or ( res[1][rIt][0] == "CA" ) or ( res[1][rIt][0] == "CB" ) or ( res[1][rIt][0] == "SG"  ) ) ) or \
+           ( ( ( res[0] == "ARG" ) or ( res[0] == "ASN" ) or ( res[0] == "ASP" ) or ( res[0] == "GLN" ) or ( res[0] == "GLU" ) or ( res[0] == "HIS" ) or ( res[0] == "LEU" ) or \
+               ( res[0] == "LYS" ) or ( res[0] == "MET" ) or ( res[0] == "PHE" ) or ( res[0] == "PRO" ) or ( res[0] == "TRP" ) or ( res[0] == "TYR" ) \
+                                                          ) and ( ( res[1][rIt][0] == "C" ) or ( res[1][rIt][0] == "CA" ) or ( res[1][rIt][0] == "CB" ) or ( res[1][rIt][0] == "CG"  ) ) ):
+        
+            # Save
+            resAts.append                             ( [ res[1][rIt][1], res[1][rIt][2], res[1][rIt][3] ] )
+            resAtsNames.append                        ( res[1][rIt][0] )
+
+    ### Sanity check
+    if len ( resAts ) != 4:
+        solvate_log.writeLog                          ( "!!! ERROR !!! Could not find all side-chain atoms (C, CA, CB and ?) in the supplied residue " + str ( res ), 0 )
+        
+        # Terminate
+        solvate_log.endLog                            ( )
+
+    
+    ### Reduce fragment to N, Ca, Cb and X (as above) atoms
+    for rIt in range( 0, len( resAtsNames ) ):
+    
+        # For each fragment atom
+        for fIt in range( 0, len( resFrag ) ):
+        
+            # Get only the same atoms
+            if resAtsNames[rIt] == resFrag[fIt][0]:
+            
+                # Save
+                fraAts.append                         ( [ resFrag[fIt][1], resFrag[fIt][2], resFrag[fIt][3] ] )
+                
+    ### Sanity check
+    if len ( fraAts ) != 4:
+        solvate_log.writeLog                          ( "!!! ERROR !!! Could not find all side-chain atoms (C, CA, CB and ?) in the supplied hydrated residue fragment " + str ( resFrag ), 0 )
+        
+        # Terminate
+        solvate_log.endLog                            ( )
+        
+    ### Convert to numpy arrays
+    resNumpy                                          = numpy.array ( [ numpy.array ( xi ) for xi in resAts ] )
+    fraNumpy                                          = numpy.array ( [ numpy.array ( xi ) for xi in fraAts ] )
+    
+    ### Compute procrustes analysis
+    ( dist, z, t )                                    = procrustes ( resNumpy, fraNumpy )
+    
+    ### Get RMSD
+    rmsdDist                                          = getRMSD ( resAts, z )
+    
+    ### Report log
+    solvate_log.writeLog                              ( "Found residue to hydrated residue fragment distance of " + str( rmsdDist ), 4 )
+    
+    ### Done
+    return                                            ( rmsdDist )
+
 
 ######################################################
 # procrustes ()

@@ -42,7 +42,9 @@ if clArgs.r is not None:
     solvate_globals._RMSDthreshold                    = float ( clArgs.r[0] )
 if clArgs.res is not None:
     solvate_globals._resInputDir                      = str ( clArgs.res[0] )
-
+    
+    
+solvate_globals._bestFragmentOnly                     = clArgs.bestOnly
 solvate_globals._useBackboneAtoms                     = clArgs.b
 
 ######################################################

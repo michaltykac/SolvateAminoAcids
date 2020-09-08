@@ -93,6 +93,10 @@ def getCLArgs ( ):
                           nargs                       = 1,
                           help                        = 'The path to the folder containing the hydrated residues input files. Defaults to \"resData\".' )
    
+    parser.add_argument ( '--bestOnly',
+                          action                      = 'store_true',
+                          help                        = 'If used, only the best fragment will be used as a match to the residue.' )
+   
     ### Change the log file name
     parser.add_argument ( '--log',
                           type                        = str,

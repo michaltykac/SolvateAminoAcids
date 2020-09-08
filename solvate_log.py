@@ -22,7 +22,7 @@
 # Imports
 
 import time                                           ### For timing
-import sys                                            ### Access to the argvs
+import sys                                            ### Access to the argvs and exit
 
 import solvate_globals                                ### Global variables
 
@@ -87,9 +87,13 @@ def endLog ( ):
     NONE
 
     """
+    ### Write final message
     elapsed_time                                      = time.time () - solvate_globals._start_time
     solvate_globals._logFile.write                    ( "\nTime taken: %.3f seconds\n" % elapsed_time )
     solvate_globals._logFile.close                    ( )
+    
+    ### Terminate
+    sys.exit                                          ( )
 
 ######################################################
 # writeLog
@@ -110,9 +114,13 @@ def writeLog ( logEntry, indent = 1 ):
     NONE
 
     """
-    solvate_globals._logFile.write                    ( " " )
+    ### Initialise
+    outputText                                        = " "
     
+    ### Deal with indentation
     for iter in range ( 0, indent ):
-        solvate_globals._logFile.write                ( "... " )
+        outputText                                    = outputText + "... "
         
-    solvate_globals._logFile.write                    ( str ( logEntry ) + "\n" )
+    ### Write
+    solvate_globals._logFile.write                    ( str ( outputText ) + str ( logEntry ) + "\n" )
+    print                                             ( outputText + logEntry )

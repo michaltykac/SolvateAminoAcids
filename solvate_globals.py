@@ -42,5 +42,6 @@ _aaTypes                                              = [ "ALA", "ARG", "ASN", "
                                                           "PRO", "SER", "THR", "TRP", "TYR", "VAL" ]
 
 _useBackboneAtoms                                     = False
+_bestFragmentOnly                                     = False
 
 _RMSDthreshold                                        = 0.5
