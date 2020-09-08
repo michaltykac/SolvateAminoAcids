@@ -77,6 +77,12 @@ def getCLArgs ( ):
 #                          help                        = 'The path and file name for the output PDB file. Please do not add the extension, as it will be generated automatically. The default value is \"./solvate_res\".')
 
     ### RMSD fragment matching threshold
+    parser.add_argument ( '--verbose',
+                          type                        = int,
+                          nargs                       = 1,
+                          help                        = 'How verbose should the run be? 0 = nothing 5 = max')
+
+    ### RMSD fragment matching threshold
     parser.add_argument ( '-r',
                           type                        = float,
                           nargs                       = 1,

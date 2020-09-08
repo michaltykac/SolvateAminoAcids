@@ -121,6 +121,9 @@ def writeLog ( logEntry, indent = 1 ):
     for iter in range ( 0, indent ):
         outputText                                    = outputText + "... "
         
-    ### Write
+    ### Write to log
     solvate_globals._logFile.write                    ( str ( outputText ) + str ( logEntry ) + "\n" )
-#    print                                             ( outputText + logEntry )
+    
+    ### Write to stdout
+    if solvate_globals._verbose >= indent:
+        print                                         ( outputText + logEntry )

@@ -28,6 +28,8 @@ import time                                           ### For timing
 
 _version                                              = "0.0.1"
 
+_verbose                                              = 1
+
 _logPath                                              = "solvate_log.txt"
 _logFile                                              = None
 

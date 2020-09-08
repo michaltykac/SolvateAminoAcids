@@ -44,6 +44,8 @@ if clArgs.res is not None:
     solvate_globals._resInputDir                      = str ( clArgs.res[0] )
 if clArgs.frag is not None:
     solvate_globals._fragInputDir                     = str ( clArgs.frag[0] )
+if clArgs.verbose is not None:
+    solvate_globals._verbose                          = int ( clArgs.verbose[0] )
     
 solvate_globals._bestFragmentOnly                     = clArgs.bestOnly
 solvate_globals._useBackboneAtoms                     = clArgs.b
