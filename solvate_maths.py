@@ -349,3 +349,41 @@ def findSmallestDistance ( distances, threshold ):
     
     ### Return the index
     return                                            ( minInd )
+
+######################################################
+# findPassingDistances ()
+def findPassingDistances ( distances, threshold ):
+    """
+    This function takes a list of distances and a threshold and returns all indices of
+    distances which pass the threshold, or -1 if no distances is below the threshold.
+
+    Parameters
+    ----------
+    list : distances
+        The list of the distances to be searched.
+        
+    float : threshold
+        The threshold below which any passing distance needs to be.
+
+    Returns
+    -------
+    list : indices
+        The indices of all passing distances or -1 if no distance is below the threshold.
+
+    """
+    ### Initialise variables
+    minInd                                            = []
+    indCtr                                            = 0
+    
+    ### Find all passing distances
+    for val in distances:
+        if val < threshold:
+            minInd.append                             ( indCtr )
+        indCtr                                       += 1
+        
+    ### Check for at least one
+    if len( minInd ) == 0:
+        minInd                                        = -1
+    
+    ### Return the index
+    return                                            ( minInd )

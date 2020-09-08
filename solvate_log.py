@@ -123,4 +123,4 @@ def writeLog ( logEntry, indent = 1 ):
         
     ### Write
     solvate_globals._logFile.write                    ( str ( outputText ) + str ( logEntry ) + "\n" )
-    print                                             ( outputText + logEntry )
+#    print                                             ( outputText + logEntry )

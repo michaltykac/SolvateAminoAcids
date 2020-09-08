@@ -87,6 +87,12 @@ def getCLArgs ( ):
                           action                      = 'store_true',
                           help                        = 'If this option is used, hydrated residues will be used to determine secondary structure and rotamer, limiting the range of tested hydrated fragments.' )
                           
+    ### Input fragments folder
+    parser.add_argument ( '--frag',
+                          type                        = str,
+                          nargs                       = 1,
+                          help                        = 'The path to the folder containing the hydrated fragment input files. Defaults to \"fragData\".')
+                          
     ### Input matched residues location
     parser.add_argument ( '--res',
                           type                        = str,

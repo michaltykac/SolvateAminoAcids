@@ -44,7 +44,10 @@ def matchFragments ( resList ):
 
     Returns
     -------
-    NONE
+    list : resMatches
+        A list with entry for each residue, where the entry is a list of all hydrated fragments that
+        were matched to the particular residue using the current settings (backbone, bestOnly,
+        threshold, ...)
 
     """
     ### Log progress
@@ -72,17 +75,68 @@ def matchFragments ( resList ):
             
             ### Find the secondary structure
             secStr                                    = findResFragSecondaryStructure ( res, allFragFiles )
-            if ( secStr == "NOT_FOUND" ):
-                continue;
+
+            ### Find the rotamer for all passing secondary structures
+            rotamer                                   = []
+            for ss in secStr:
+            
+                # Search for this secondary structure
+                rotamerHlp                            = findResFragRotamer ( res, allFragFiles, secStr )
                 
-            ### Find the rotamer
-            rotamer                                   = findResFragRotamer ( res, allFragFiles, secStr )
-            print ( rotamer )
+                # Check for ALA and GLY
+                if rotamerHlp == "NOT_INCLUDED":
+                
+                    # Initialise variables
+                    fragList                          = []
+                
+                    # Find all fragments matching the description
+                    fragPath                          = os.path.join ( solvate_globals._fragInputDir, res[0] )
+                    fragPath2                         = os.path.join ( fragPath, res[0] )
+                    allFragFiles                      = [ frag for frag in glob.glob ( fragPath2 + "_" + str( secStr ) + "_NA" + "**.pdb", recursive = True ) ]
+                    
+                    # Report progress
+                    for fl in allFragFiles:
+                        solvate_log.writeLog          ( "Matched residue to fragment " + str ( fl ) + ".", 3 )
+                        fragList.append               ( fl )
+                    
+                else:
+                
+                    # Save
+                    rotamer                           = rotamer + rotamerHlp
+
+            ### ALA and GLY added separately
+            if len ( fragList ) > 0:
+
+                # Save to output
+                resMatches.append                     ( fragList )
+                fragList                              = []
+                continue
+
+            ### Save the results
+            fragList                                  = []
+            for rot in rotamer:
+                
+                # Determine the fragments that match the desccription
+                fragPath                              = os.path.join ( solvate_globals._fragInputDir, res[0] )
+                fragPath2                             = os.path.join ( fragPath, res[0] )
+                allFragFiles                          = [ frag for frag in glob.glob ( fragPath2 + "_" + str( rot.split("_")[1] ) + "_" + str( rot.split("_")[0] ) + "**.pdb", recursive = True ) ]
+                
+                # Report progress
+                for fl in allFragFiles:
+                    solvate_log.writeLog              ( "Matched residue to fragment " + str ( fl ) + ".", 3 )
+                    fragList.append                   ( fl )
+            
+            # Save to output
+            resMatches.append                         ( fragList )
+            fragList                                  = []
             
         else:
         
             ### Using all fragments
             print ( "Will NOT use backbone!" )
+            
+    ### Done
+    return                                        ( resMatches )
 
 
 ######################################################
@@ -102,8 +156,10 @@ def findResFragSecondaryStructure ( res, allFragFiles ):
 
     Returns
     -------
-    str : secStr
-        The letter coding the secondary structure of the best fitting fragment or "NOT_FOUND" if no match was found.
+    list : secStr
+        List of the letters coding the secondary structure of the fitting fragments or empty list if no match
+        was found. The number of returned values depends on whether the best fragment only or all passing
+        fragments are to be returned.
 
     """
     ### If no frags, this is probably an error
@@ -124,22 +180,50 @@ def findResFragSecondaryStructure ( res, allFragFiles ):
         # Compute distance between hydrated residue fragment and the processed residue
         distances.append                              ( solvate_maths.residueToResFragmentDistance_backbone ( res, protein ) )
         
-    ### Find best hydrated residue fragment in terms of backbone, if it exists
-    minimalIndex                                      = solvate_maths.findSmallestDistance ( distances, solvate_globals._RMSDthreshold )
+    ### Are we searching for best, or all passing?
+    if solvate_globals._bestFragmentOnly:
+        
+        ### Find best hydrated residue fragment in terms of backbone, if it exists
+        minimalIndex                                  = solvate_maths.findSmallestDistance ( distances, solvate_globals._RMSDthreshold )
+        
+        ### If no distance is below the threshold
+        if minimalIndex == -1:
+            solvate_log.writeLog                      ( "Failed to find any matching hydrated residue fragment.", 3 )
+            return                                    ( [] )
+        
+        ### Determine best hydrated residue fragment's secondary structure from name
+        secStr                                        = allFragFiles[minimalIndex].split( "/" )[len ( allFragFiles[minimalIndex].split( "/" ) ) - 1].split ( "_" )[1]
+        
+        ### Report progress
+        solvate_log.writeLog                          ( "Best backbone fitting residue fragment is " + allFragFiles[minimalIndex].split( "/" )[len (    allFragFiles[minimalIndex].split( "/" ) ) - 1] + " with RMSD of " + str( distances[minimalIndex] ) + " and secondary structure therefore is " + str(    secStr ), 3 )
     
-    ### If no distance is below the threshold
-    if minimalIndex == -1:
-        solvate_log.writeLog                          ( "Failed to find any matching hydrated residue fragment.", 3 )
-        return                                        ( "NOT_FOUND" )
-    
-    ### Determine best hydrated residue fragment's secondary structure from name
-    secStr                                            = allFragFiles[minimalIndex].split( "/" )[len ( allFragFiles[minimalIndex].split( "/" ) ) - 1].split ( "_" )[1]
+        ### Done
+        return                                        ( [ secStr ] )
+        
+    else:
+        
+        ### Initialise variables
+        secStr                                        = []
+        
+        ### Find passing indices
+        indices                                       = solvate_maths.findPassingDistances ( distances, solvate_globals._RMSDthreshold )
+        
+        ### If no distance is below the threshold
+        if indices == -1:
+            solvate_log.writeLog                      ( "Failed to find any matching hydrated residue fragment.", 3 )
+            return                                    ( [] )
+        
+        ### For each index
+        for ind in indices:
             
-    ### Report progress
-    solvate_log.writeLog                              ( "Best backbone fitting residue fragment is " + allFragFiles[minimalIndex].split( "/" )[len ( allFragFiles[minimalIndex].split( "/" ) ) - 1] + " with RMSD of " + str( distances[minimalIndex] ) + " and secondary structure therefore is " + str( secStr ), 3 )
-    
-    ### Done
-    return                                            ( secStr )
+            # Determine the secondary structure for the fragment
+            secStr.append                             ( allFragFiles[ind].split( "/" )[len ( allFragFiles[ind].split( "/" ) ) - 1].split ( "_" )[1] )
+            
+            # Report progress
+            solvate_log.writeLog                      ( "A backbone fitting residue fragment " + allFragFiles[ind].split( "/" )[len (    allFragFiles[ind].split( "/" ) ) - 1] + " with RMSD of " + str( distances[ind] ) + " and secondary structure " + str( allFragFiles[ind].split( "/" )[len ( allFragFiles[ind].split( "/" ) ) - 1].split ( "_" )[1] ) + " found.", 3 )
+        
+        ### Done ( returning unique results )
+        return                                        ( list ( set ( secStr ) ) )
 
 ######################################################
 # findResFragRotamer ()
@@ -156,13 +240,16 @@ def findResFragRotamer ( res, allFragFiles, secStr ):
     list : allFragFiles
         List of all fragments found for this residue
         
-    str : secStr
+    list : secStr
         The secondary structure for which the rotamer is to be determined.
 
     Returns
     -------
     str : rotamer
-        The string coding the rotamer of the best fitting fragment, "NOT_FOUND" if no match was found or "NOT_INCLUDED" for ALA and GLY.
+        List of the letters coding the rotamers of the fitting fragments followed by underscore and the
+        appropriate secondary structure letter or empty list if no match was found. The number of returned
+        values depends on whether the best fragment only or all passing fragments are to be returned. For ALA
+        and GLY, "NOT_INCLUDED" will be returned instead.
 
     """
     ### Initialise variables
@@ -179,7 +266,7 @@ def findResFragRotamer ( res, allFragFiles, secStr ):
         for frag in allFragFiles:
 
             ### Ignore mismatching secondary structure fragments
-            if frag.split( "/" )[ len( frag.split( "/" ) ) - 1 ].split( "_" )[1] != secStr:
+            if frag.split( "/" )[ len( frag.split( "/" ) ) - 1 ].split( "_" )[1] not in secStr:
                 continue
                 
             ### Parse the fragment ( again, this could be improved, but would make it harder to read )
@@ -188,19 +275,50 @@ def findResFragRotamer ( res, allFragFiles, secStr ):
             ### Find distance
             distances.append                          ( solvate_maths.residueToResFragmentDistance_rotamer ( res, protein ) )
             
-        ### Find best hydrated residue fragment in terms of rotamer, if it exists
-        minimalIndex                                  = solvate_maths.findSmallestDistance ( distances, solvate_globals._RMSDthreshold )
-
-        ### If no distance is below the threshold
-        if minimalIndex == -1:
-            solvate_log.writeLog                      ( "Failed to find any matching hydrated residue fragment.", 3 )
-            return                                    ( "NOT_FOUND" )
+        ### Are we searching for best, or all passing?
+        if solvate_globals._bestFragmentOnly:
             
-        ### Find best rotamer
-        rotamer                                       = allFragFiles[minimalIndex].split( "/" )[ len( allFragFiles[minimalIndex].split( "/" ) ) - 1 ].split( "." )[0].split( "_" )[2]
+            # Find best hydrated residue fragment in terms of rotamer, if it exists
+            minimalIndex                              = solvate_maths.findSmallestDistance ( distances, solvate_globals._RMSDthreshold )
+    
+            # If no distance is below the threshold
+            if minimalIndex == -1:
+                solvate_log.writeLog                  ( "Failed to find any matching hydrated residue fragment.", 3 )
+                return                                ( [] )
+            
+            # Find best rotamer
+            rotamer                                   = allFragFiles[minimalIndex].split( "/" )[ len( allFragFiles[minimalIndex].split( "/" ) ) - 1 ].split( "."    )[0].split( "_" )[2] + "_" + allFragFiles[minimalIndex].split( "/" )[ len( allFragFiles[minimalIndex].split( "/" ) ) - 1 ].split("_")[1];
+    
+            ### Report progress
+            solvate_log.writeLog                      ( "Best rotamer fitting residue fragment is " + allFragFiles[minimalIndex].split( "/" )[len ( allFragFiles[minimalIndex].split( "/" ) ) - 1] + " with RMSD of " + str( distances[minimalIndex] ) + " and the rotamer therefore is " + str( rotamer ), 3 )
+            
+            ### Done
+            return                                    ( [ rotamer ] )
+            
+        else:
+        
+            # Initialise variables
+            rotamer                                   = []
+            
+            # Find passing indices
+            indices                                   = solvate_maths.findPassingDistances ( distances, solvate_globals._RMSDthreshold )
+            
+            # If no distance is below the threshold
+            if indices == -1:
+                solvate_log.writeLog                  ( "Failed to find any matching hydrated residue fragment.", 3 )
+                return                                ( [] )
+            
+            ### For each index
+            for ind in indices:
+                
+                # Determine the secondary structure for the fragment
+                rotamer.append                        ( allFragFiles[ind].split( "/" )[ len( allFragFiles[ind].split( "/" ) ) - 1 ].split( "."    )[0].split( "_" )[2] + "_" + allFragFiles[ind].split( "/" )[ len( allFragFiles[ind].split( "/" ) ) - 1 ].split("_")[1] )
+                
+                # Report progress
+                solvate_log.writeLog                  ( "A rotamer fitting residue fragment " + allFragFiles[ind].split( "/" )[len ( allFragFiles[ind].split( "/" ) ) - 1] + " with RMSD of " + str( distances[ind] ) + " and the rotamer " + str( allFragFiles[ind].split( "/" )[ len( allFragFiles[ind].split( "/" ) ) - 1 ].split( "."    )[0].split( "_" )[2] ) + " found.", 3 )
 
-        ### Report progress
-        solvate_log.writeLog                          ( "Best rotamer fitting residue fragment is " + allFragFiles[minimalIndex].split( "/" )[len ( allFragFiles[minimalIndex].split( "/" ) ) - 1] + " with RMSD of " + str( distances[minimalIndex] ) + " and the rotamer therefore is " + str( rotamer ), 3 )
+            ### Done ( returning unique results )
+            return                                    ( list ( set ( rotamer ) ) )
 
     else:
 

@@ -34,6 +34,7 @@ _logFile                                              = None
 _inputCoordinateFile                                  = ""
 
 _resInputDir                                          = "resData"
+_fragInputDir                                         = "fragData"
 
 _start_time                                           = time.time()
 

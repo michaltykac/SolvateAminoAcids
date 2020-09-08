@@ -42,7 +42,8 @@ if clArgs.r is not None:
     solvate_globals._RMSDthreshold                    = float ( clArgs.r[0] )
 if clArgs.res is not None:
     solvate_globals._resInputDir                      = str ( clArgs.res[0] )
-    
+if clArgs.frag is not None:
+    solvate_globals._fragInputDir                     = str ( clArgs.frag[0] )
     
 solvate_globals._bestFragmentOnly                     = clArgs.bestOnly
 solvate_globals._useBackboneAtoms                     = clArgs.b
@@ -55,11 +56,13 @@ solvate_log.startLog                                  ( )
 # Read in the co-ordinate file
 inputCoords                                           = solvate_structures.readInCoordinates ( solvate_globals._inputCoordinateFile )
 
+######################################################
 # Parse co-ordinates for solvate speed-up
 resList                                               = solvate_structures.parseOutCoords ( inputCoords )
 
-# Match fragments
-solvate_matchFragments.matchFragments                 ( resList )
+######################################################
+# Match fragments to each residue
+matchedFrags                                          = solvate_matchFragments.matchFragments ( resList )
 
 ######################################################
 # Terminate
