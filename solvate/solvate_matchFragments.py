@@ -1,6 +1,13 @@
 # -*- coding: UTF-8 -*-
 #   \file solvate_matchFragments.py
-#   \brief This file provides ...
+#   \brief This file provides fragment matching algorithms.
+#
+#   This file contains the functions and algorithms required for fragment matching to a macromolecular
+#   model using several different approaches. These include matching all fragments and then determining the
+#   matches using the distances, or firstly determining the residue secondary structure and rotamer using
+#   matches to hydrated residues and then using this information matching the hydrated fragments. Also, the
+#   algorithms here can use either only the best matched fragment, or all fragments passing the RMSD distance
+#   threshold.
 #
 #   Copyright by the Authors and individual contributors. All rights reserved.
 #
@@ -14,7 +21,7 @@
 #   \author    Michal Tykac
 #   \author    Lada Biedermannová
 #   \author    Jiří Černý
-#   \version   0.0.1
+#   \version   0.0.2
 #   \date      SEP 2020
 ######################################################
 
@@ -26,14 +33,13 @@ import sys                                            ### Access to the argvs
 import os                                             ### For file path manipulation
 import glob                                           ### Listing all files in folder
 
-import solvate_globals                                ### Global variables
-import solvate_log                                    ### Writing log
-import solvate_structures                             ### Fragment reading
-import solvate_maths                                  ### Computing distances and rotations
+import solvate.solvate_log as solvate_log             ### Writing log
+import solvate.solvate_structures as solvate_structures ### Fragment reading
+import solvate.solvate_maths as solvate_maths         ### Computing distances and rotations
 
 ######################################################
 # matchFragments
-def matchFragments ( resList ):
+def matchFragments ( resList, settings ):
     """
     This function takes all supplied residues and finds the optimal/threshold passing
     hydrated fragments for each of the residues. It can use either only the best aligned
@@ -50,6 +56,9 @@ def matchFragments ( resList ):
     ----------
     list : resList
         The list of all residues as returned by parseOutCoords() function.
+        
+    solvate_globals.globalSettings : settings
+        Instance of the settings class contaning all the options and values.
 
     Returns
     -------
@@ -60,51 +69,51 @@ def matchFragments ( resList ):
 
     """
     ### Log progress
-    solvate_log.writeLog                              ( "Starting fragment matching", 1 )
+    solvate_log.writeLog                              ( "Starting fragment matching", settings, 1 )
     
     ### Initialise variables
     resInd                                            = 0
     resMatches                                        = []
     
     ### Read in fragments and residues
-    fragFragments                                     = solvate_structures.getAllFragmentFragments (  )
+    fragFragments                                     = solvate_structures.getAllFragmentFragments ( settings )
     resFragments                                      = {}
-    if solvate_globals._useBackboneAtoms:
-        resFragments                                  = solvate_structures.getAllResidueFragments (  )
+    if settings.useBackboneAtoms:
+        resFragments                                  = solvate_structures.getAllResidueFragments ( settings )
     
     ### For each amino acid
     for res in resList:
 
         ### How are we matching?
-        if solvate_globals._useBackboneAtoms:
-        
+        if settings.useBackboneAtoms:
+
             ### Initialise variables
             resInd                                    = resInd + 1
-            
+
             ### Report progress
-            solvate_log.writeLog                      ( "Processing residue number " + str ( resInd ) + " (" + str ( res[0] ) + ")", 2 )
-            
+            solvate_log.writeLog                      ( "Processing residue number " + str ( resInd ) + " (" + str ( res[0] ) + ")", settings, 2 )
+
             ### Match the residue to hydrated fragments using backbone step
-            resMatches.append                         ( matchFragmentsUsingBackbone ( res, resFragments, fragFragments ) )
-            
+            resMatches.append                         ( matchFragmentsUsingBackbone ( res, resFragments, fragFragments, settings ) )
+
         else:
-        
+
             ### Initialise variables
             resInd                                    = resInd + 1
-            
+
             ### Report progress
-            solvate_log.writeLog                      ( "Processing residue number " + str ( resInd ) + " (" + str ( res[0] ) + ")", 2 )
-            
+            solvate_log.writeLog                      ( "Processing residue number " + str ( resInd ) + " (" + str ( res[0] ) + ")", settings, 2 )
+
             ### Match the residue to hydrated fragments using backbone step
-            resMatches.append                         ( matchFragmentsDirect ( res, fragFragments ) )
-            
+            resMatches.append                         ( matchFragmentsDirect ( res, fragFragments, settings ) )
+
     ### Done
     return                                            ( resMatches )
 
 
 ######################################################
 # findResFragSecondaryStructure()
-def findResFragSecondaryStructure ( res, resFragments ):
+def findResFragSecondaryStructure ( res, resFragments, settings ):
     """
     This function determines the secondary structure of the best backbone-atoms-fitting hydrated-residue
     fragment and returns it.
@@ -117,6 +126,9 @@ def findResFragSecondaryStructure ( res, resFragments ):
     dictionary : resFragments
         A dictionary holding the parsed data for each hydrated residue fragment in terms of both
         protein and waters atoms.
+        
+    solvate_globals.globalSettings : settings
+        Instance of the settings class contaning all the options and values.
 
     Returns
     -------
@@ -126,6 +138,9 @@ def findResFragSecondaryStructure ( res, resFragments ):
         fragments are to be returned.
 
     """
+    ### Report progress
+    solvate_log.writeLog                              ( "Started secondary structure search.", settings, 3 )
+    
     ### For each fragment, find distance to this residue
     distances                                         = []
     fragNames                                         = []
@@ -136,25 +151,25 @@ def findResFragSecondaryStructure ( res, resFragments ):
             continue
         
         # Compute distance between hydrated residue fragment and the processed residue
-        distances.append                              ( solvate_maths.residueToResFragmentDistance_backbone ( res, resFragments[frag]["protein"] ) )
+        distances.append                              ( solvate_maths.residueToResFragmentDistance_backbone ( res, resFragments[frag]["protein"], settings ) )
         fragNames.append                              ( frag )
         
     ### Are we searching for best, or all passing?
-    if solvate_globals._bestFragmentOnly:
+    if settings.bestFragmentOnly:
         
         ### Find best hydrated residue fragment in terms of backbone, if it exists
-        minimalIndex                                  = solvate_maths.findSmallestDistance ( distances, solvate_globals._RMSDthreshold )
+        minimalIndex                                  = solvate_maths.findSmallestDistance ( distances, settings.RMSDthreshold )
         
         ### If no distance is below the threshold
         if minimalIndex == -1:
-            solvate_log.writeLog                      ( "Failed to find any matching hydrated residue fragment.", 3 )
+            solvate_log.writeLog                      ( "Failed to find any matching hydrated residue fragment.", settings, 3 )
             return                                    ( [] )
         
         ### Determine best hydrated residue fragment's secondary structure from name
         secStr                                        = fragNames[minimalIndex].split( os.path.sep )[len ( fragNames[minimalIndex].split( os.path.sep ) ) - 1].split ( "_" )[1]
         
         ### Report progress
-        solvate_log.writeLog                          ( "Best backbone fitting residue fragment is " + fragNames[minimalIndex].split( os.path.sep )[len (    fragNames[minimalIndex].split( os.path.sep ) ) - 1] + " with RMSD of " + str( distances[minimalIndex][0] ) + " and secondary structure therefore is " + str(    secStr ), 3 )
+        solvate_log.writeLog                          ( "Best backbone fitting residue fragment is " + fragNames[minimalIndex].split( os.path.sep )[len (    fragNames[minimalIndex].split( os.path.sep ) ) - 1] + " with RMSD of " + str( distances[minimalIndex][0] ) + " and secondary structure therefore is " + str(    secStr ), settings, 4 )
     
         ### Done
         return                                        ( [ secStr ] )
@@ -165,11 +180,11 @@ def findResFragSecondaryStructure ( res, resFragments ):
         secStr                                        = []
         
         ### Find passing indices
-        indices                                       = solvate_maths.findPassingDistances ( distances, solvate_globals._RMSDthreshold )
+        indices                                       = solvate_maths.findPassingDistances ( distances, settings.RMSDthreshold )
         
         ### If no distance is below the threshold
         if indices == -1:
-            solvate_log.writeLog                      ( "Failed to find any matching hydrated residue fragment.", 3 )
+            solvate_log.writeLog                      ( "Failed to find any matching hydrated residue fragment.", settings, 4 )
             return                                    ( [] )
         
         ### For each index
@@ -179,14 +194,14 @@ def findResFragSecondaryStructure ( res, resFragments ):
             secStr.append                             ( fragNames[ind].split( os.path.sep )[len ( fragNames[ind].split( os.path.sep ) ) - 1].split ( "_" )[1] )
             
             # Report progress
-            solvate_log.writeLog                      ( "A backbone fitting residue fragment " + fragNames[ind].split( os.path.sep )[len (    fragNames[ind].split( os.path.sep ) ) - 1] + " with RMSD of " + str( distances[ind][0] ) + " and secondary structure " + str( fragNames[ind].split( os.path.sep )[len ( fragNames[ind].split( os.path.sep ) ) - 1].split ( "_" )[1] ) + " found.", 3 )
+            solvate_log.writeLog                      ( "A backbone fitting residue fragment " + fragNames[ind].split( os.path.sep )[len (    fragNames[ind].split( os.path.sep ) ) - 1] + " with RMSD of " + str( distances[ind][0] ) + " and secondary structure " + str( fragNames[ind].split( os.path.sep )[len ( fragNames[ind].split( os.path.sep ) ) - 1].split ( "_" )[1] ) + " found.", settings, 4 )
         
         ### Done ( returning unique results )
         return                                        ( list ( set ( secStr ) ) )
 
 ######################################################
 # findResFragRotamer ()
-def findResFragRotamer ( res, resFragments, secStr ):
+def findResFragRotamer ( res, resFragments, secStr, settings ):
     """
     This function determines the rotamer of the best side-chain-atoms fitting hydrated-residue
     fragment and returns it.
@@ -202,6 +217,9 @@ def findResFragRotamer ( res, resFragments, secStr ):
         
     list : secStr
         The secondary structure for which the rotamer is to be determined.
+        
+    solvate_globals.globalSettings : settings
+        Instance of the settings class contaning all the options and values.
 
     Returns
     -------
@@ -213,6 +231,9 @@ def findResFragRotamer ( res, resFragments, secStr ):
         and GLY, "NOT_INCLUDED" will be returned instead.
 
     """
+    ### Report progress
+    solvate_log.writeLog                              ( "Started rotamer search.", settings, 3 )
+    
     ### Initialise variables
     rotamer                                           = ""
     
@@ -235,25 +256,25 @@ def findResFragRotamer ( res, resFragments, secStr ):
                 continue
 
             ### Find distance
-            distances.append                          ( solvate_maths.residueToResFragmentDistance_rotamer ( res, resFragments[frag]["protein"] ) )
+            distances.append                          ( solvate_maths.residueToResFragmentDistance_rotamer ( res, resFragments[frag]["protein"], settings ) )
             forNames.append                           ( frag )
             
         ### Are we searching for best, or all passing?
-        if solvate_globals._bestFragmentOnly:
+        if settings.bestFragmentOnly:
             
             # Find best hydrated residue fragment in terms of rotamer, if it exists
-            minimalIndex                              = solvate_maths.findSmallestDistance ( distances, solvate_globals._RMSDthreshold )
+            minimalIndex                              = solvate_maths.findSmallestDistance ( distances, settings.RMSDthreshold )
     
             # If no distance is below the threshold
             if minimalIndex == -1:
-                solvate_log.writeLog                  ( "Failed to find any matching hydrated residue fragment.", 3 )
+                solvate_log.writeLog                  ( "Failed to find any matching hydrated residue fragment.", settings, 4 )
                 return                                ( [] )
             
             # Find best rotamer
             rotamer                                   = forNames[minimalIndex].split( os.path.sep )[ len( forNames[minimalIndex].split( os.path.sep ) ) - 1 ].split( "."    )[0].split( "_" )[2] + "_" + forNames[minimalIndex].split( os.path.sep )[ len( forNames[minimalIndex].split( os.path.sep ) ) - 1 ].split("_")[1];
     
             ### Report progress
-            solvate_log.writeLog                      ( "Best rotamer fitting residue fragment is " + forNames[minimalIndex].split( os.path.sep )[len ( forNames[minimalIndex].split( os.path.sep ) ) - 1] + " with RMSD of " + str( distances[minimalIndex][0] ) + " and the rotamer therefore is " + str( rotamer ), 3 )
+            solvate_log.writeLog                      ( "Best rotamer fitting residue fragment is " + forNames[minimalIndex].split( os.path.sep )[len ( forNames[minimalIndex].split( os.path.sep ) ) - 1] + " with RMSD of " + str( distances[minimalIndex][0] ) + " and the rotamer therefore is " + str( rotamer ), settings, 4 )
             
             ### Done
             return                                    ( [ { rotamer : distances[minimalIndex][1] } ] )
@@ -264,11 +285,11 @@ def findResFragRotamer ( res, resFragments, secStr ):
             rotamer                                   = []
             
             # Find passing indices
-            indices                                   = solvate_maths.findPassingDistances ( distances, solvate_globals._RMSDthreshold )
+            indices                                   = solvate_maths.findPassingDistances ( distances, settings.RMSDthreshold )
             
             # If no distance is below the threshold
             if indices == -1:
-                solvate_log.writeLog                  ( "Failed to find any matching hydrated residue fragment.", 3 )
+                solvate_log.writeLog                  ( "Failed to find any matching hydrated residue fragment.", settings, 4 )
                 return                                ( [] )
             
             ### For each index
@@ -278,7 +299,7 @@ def findResFragRotamer ( res, resFragments, secStr ):
                 rotamer.append                        ( { forNames[ind].split( os.path.sep )[ len( forNames[ind].split( os.path.sep ) ) - 1 ].split( "."    )[0].split( "_" )[2] + "_" + forNames[ind].split( os.path.sep )[ len( forNames[ind].split( os.path.sep ) ) - 1 ].split("_")[1] : distances[ind][1] } )
                 
                 # Report progress
-                solvate_log.writeLog                  ( "A rotamer fitting residue fragment " + forNames[ind].split( os.path.sep )[len ( forNames[ind].split( os.path.sep ) ) - 1] + " with RMSD of " + str( distances[ind][0] ) + " and the rotamer " + str( forNames[ind].split( os.path.sep )[ len( forNames[ind].split( os.path.sep ) ) - 1 ].split( "."    )[0].split( "_" )[2] ) + " found.", 3 )
+                solvate_log.writeLog                  ( "A rotamer fitting residue fragment " + forNames[ind].split( os.path.sep )[len ( forNames[ind].split( os.path.sep ) ) - 1] + " with RMSD of " + str( distances[ind][0] ) + " and the rotamer " + str( forNames[ind].split( os.path.sep )[ len( forNames[ind].split( os.path.sep ) ) - 1 ].split( "."    )[0].split( "_" )[2] ) + " found.", settings, 4 )
 
             ### Done
             return                                    ( rotamer )
@@ -286,7 +307,7 @@ def findResFragRotamer ( res, resFragments, secStr ):
     else:
 
         ### Report progress
-        solvate_log.writeLog                          ( "This is either ALA or GLY residue. There are no rotamers for these residues...", 3 )
+        solvate_log.writeLog                          ( "This is either ALA or GLY residue. There are no rotamers for these residues...", settings, 4 )
         
         ### Done
         return                                        ( "NOT_INCLUDED" )
@@ -296,7 +317,7 @@ def findResFragRotamer ( res, resFragments, secStr ):
 
 ######################################################
 # matchFragmentsUsingBackbone ()
-def matchFragmentsUsingBackbone ( res, resFragments, fragFragments ):
+def matchFragmentsUsingBackbone ( res, resFragments, fragFragments, settings ):
     """
     This function first matches all appropriate hydrated residues backbone atoms to
     the supplied residue backbone atoms. From this, it selects either the best hydrated
@@ -323,6 +344,9 @@ def matchFragmentsUsingBackbone ( res, resFragments, fragFragments ):
     dictionary : fragFragments
         A dictionary holding the parsed data for each hydrated fragment in terms of both
         protein and waters atoms.
+        
+    solvate_globals.globalSettings : settings
+        Instance of the settings class contaning all the options and values.
 
     Returns
     -------
@@ -333,15 +357,15 @@ def matchFragmentsUsingBackbone ( res, resFragments, fragFragments ):
 
     """
     ### Find the secondary structure
-    secStr                                            = findResFragSecondaryStructure ( res, resFragments )
-
+    secStr                                            = findResFragSecondaryStructure ( res, resFragments, settings )
+    
     ### Find the rotamer for all passing secondary structures
     rotamer                                           = []
     fragList                                          = []
     for ss in secStr:
     
         # Search for rotamers using this secondary structure
-        rotamerHlp                                    = findResFragRotamer ( res, resFragments, secStr )
+        rotamerHlp                                    = findResFragRotamer ( res, resFragments, secStr, settings )
 
         # Check for ALA and GLY
         if rotamerHlp == "NOT_INCLUDED":
@@ -362,22 +386,22 @@ def matchFragmentsUsingBackbone ( res, resFragments, fragFragments ):
                     continue
             
                 # Compute the procrustes
-                dists.append                          ( solvate_maths.residueToResFragmentDistance_direct ( res, fragFragments[fl]["protein"] ) )
+                dists.append                          ( solvate_maths.residueToResFragmentDistance_direct ( res, fragFragments[fl]["protein"], settings ) )
                 forNames.append                       ( fl )
                 
             # Deal with dists
-            if solvate_globals._bestFragmentOnly:
+            if settings.bestFragmentOnly:
                 
                 # Find best hydrated residue fragment in terms of rotamer, if it exists
-                minimalIndex                          = solvate_maths.findSmallestDistance ( dists, solvate_globals._RMSDthreshold )
+                minimalIndex                          = solvate_maths.findSmallestDistance ( dists, settings.RMSDthreshold )
             
                 # If no distance is below the threshold
                 if minimalIndex == -1:
-                    solvate_log.writeLog              ( "Failed to find any matching hydrated residue fragment.", 3 )
+                    solvate_log.writeLog              ( "Failed to find any matching hydrated residue fragment.", settings, 4 )
                     return                            ( [] )
                 
                 # Report progress
-                solvate_log.writeLog                  ( "Best fragment fitting the residue is " + forNames[minimalIndex].split( os.path.sep )[len ( forNames[minimalIndex].split( os.path.sep ) ) - 1] + " with RMSD of " + str( dists[minimalIndex][0] ) + ".", 3 )
+                solvate_log.writeLog                  ( "Best fragment fitting the residue is " + forNames[minimalIndex].split( os.path.sep )[len ( forNames[minimalIndex].split( os.path.sep ) ) - 1] + " with RMSD of " + str( dists[minimalIndex][0] ) + ".", settings, 4 )
                 
                 ### Done
                 fragList.append                       ( { forNames[minimalIndex]:  dists[minimalIndex][1] } )
@@ -388,11 +412,11 @@ def matchFragmentsUsingBackbone ( res, resFragments, fragFragments ):
                 mtchs                                 = []
                 
                 # Find passing indices
-                indices                               = solvate_maths.findPassingDistances ( dists, solvate_globals._RMSDthreshold )
+                indices                               = solvate_maths.findPassingDistances ( dists, settings.RMSDthreshold )
                 
                 # If no distance is below the threshold
                 if indices == -1:
-                    solvate_log.writeLog              ( "Failed to find any matching hydrated residue fragment.", 3 )
+                    solvate_log.writeLog              ( "Failed to find any matching hydrated residue fragment.", settings, 4 )
                     return                            ( [] )
                 
                 ### For each index
@@ -402,7 +426,7 @@ def matchFragmentsUsingBackbone ( res, resFragments, fragFragments ):
                     mtchs.append                      ( { forNames[ind]: dists[ind][1] } )
                     
                     # Report progress
-                    solvate_log.writeLog              ( "A fragment " + forNames[ind].split( os.path.sep )[len ( forNames[ind].split( os.path.sep ) ) - 1] + " fits the residue with RMSD of " + str( dists[ind][0] ) + " was found.", 3 )
+                    solvate_log.writeLog              ( "A fragment " + forNames[ind].split( os.path.sep )[len ( forNames[ind].split( os.path.sep ) ) - 1] + " fits the residue with RMSD of " + str( dists[ind][0] ) + " was found.", settings, 4 )
 
                 ### Done ( returning unique results )
                 fragList.append                       ( { forNames[ind]:  dists[ind][1] } )
@@ -445,7 +469,7 @@ def matchFragmentsUsingBackbone ( res, resFragments, fragFragments ):
 
 ######################################################
 # matchFragmentsDirect ()
-def matchFragmentsDirect ( res, fragFragments ):
+def matchFragmentsDirect ( res, fragFragments, settings ):
     """
     This function computes the distances between all appropriate hydrated fragments and the
     supplied residue and then it selects either the best matching hydrated fragment, or all
@@ -460,6 +484,9 @@ def matchFragmentsDirect ( res, fragFragments ):
     dictionary : fragFragments
         A dictionary holding the parsed data for each hydrated fragment in terms of both
         protein and waters atoms.
+        
+    solvate_globals.globalSettings : settings
+        Instance of the settings class contaning all the options and values.
 
     Returns
     -------
@@ -474,28 +501,33 @@ def matchFragmentsDirect ( res, fragFragments ):
     forNames                                          = []
     
     ### For each fragment, get the distances
+    flIter                                            = 0
     for fl in fragFragments.keys():
     
         # Ignore fragments with wrong amino acid type
         if fl.split( os.path.sep )[ len ( fl.split( os.path.sep ) ) - 1 ].split("_")[0] != res[0]:
             continue
         
-        distances.append                              ( solvate_maths.residueToResFragmentDistance_direct ( res, fragFragments[fl]["protein"] ) )
+        distances.append                              ( solvate_maths.residueToResFragmentDistance_direct ( res, fragFragments[fl]["protein"], settings ) )
         forNames.append                               ( fl )
+        flIter                                        = flIter + 1
+        
+    ### Report progress
+    solvate_log.writeLog                              ( "Found " + str( flIter ) + " hydrated fragments for this residue.", settings, 3 )
         
     ### Are we searching for best, or all passing?
-    if solvate_globals._bestFragmentOnly:
+    if settings.bestFragmentOnly:
         
         # Find best hydrated residue fragment in terms of rotamer, if it exists
-        minimalIndex                                  = solvate_maths.findSmallestDistance ( distances, solvate_globals._RMSDthreshold )
+        minimalIndex                                  = solvate_maths.findSmallestDistance ( distances, settings.RMSDthreshold )
     
         # If no distance is below the threshold
         if minimalIndex == -1:
-            solvate_log.writeLog                      ( "Failed to find any matching hydrated residue fragment.", 3 )
+            solvate_log.writeLog                      ( "Failed to find any matching hydrated residue fragment.", settings, 4 )
             return                                    ( [] )
         
         # Report progress
-        solvate_log.writeLog                          ( "Best fragment fitting the residue is " + forNames[minimalIndex].split( os.path.sep )[len ( forNames[minimalIndex].split( os.path.sep ) ) - 1] + " with RMSD of " + str( distances[minimalIndex][0] ) + ".", 3 )
+        solvate_log.writeLog                          ( "Best fragment fitting the residue is " + forNames[minimalIndex].split( os.path.sep )[len ( forNames[minimalIndex].split( os.path.sep ) ) - 1] + " with RMSD of " + str( distances[minimalIndex][0] ) + ".", settings, 4 )
         
         ### Done
         return                                        ( [ { forNames[minimalIndex]:  distances[minimalIndex][1] } ] )
@@ -506,11 +538,11 @@ def matchFragmentsDirect ( res, fragFragments ):
         mtchs                                         = []
         
         # Find passing indices
-        indices                                       = solvate_maths.findPassingDistances ( distances, solvate_globals._RMSDthreshold )
+        indices                                       = solvate_maths.findPassingDistances ( distances, settings.RMSDthreshold )
         
         # If no distance is below the threshold
         if indices == -1:
-            solvate_log.writeLog                      ( "Failed to find any matching hydrated residue fragment.", 3 )
+            solvate_log.writeLog                      ( "Failed to find any matching hydrated residue fragment.", settings, 4 )
             return                                    ( [] )
         
         ### For each index
@@ -520,7 +552,7 @@ def matchFragmentsDirect ( res, fragFragments ):
             mtchs.append                              ( { forNames[ind]: distances[ind][1] } )
             
             # Report progress
-            solvate_log.writeLog                      ( "A fragment " + forNames[ind].split( os.path.sep )[len ( forNames[ind].split( os.path.sep ) ) - 1] + " fits the residue with RMSD of " + str( distances[ind][0] ) + " was found.", 3 )
+            solvate_log.writeLog                      ( "A fragment " + forNames[ind].split( os.path.sep )[len ( forNames[ind].split( os.path.sep ) ) - 1] + " fits the residue with RMSD of " + str( distances[ind][0] ) + " was found.", settings, 4 )
 
         ### Done ( returning unique results )
         return                                        ( mtchs )

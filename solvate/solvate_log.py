@@ -1,6 +1,6 @@
 # -*- coding: UTF-8 -*-
 #   \file solvate_log.py
-#   \brief This file provides the log wriiting functionality for other parts of solvate.
+#   \brief This file provides the log writing functionality for other parts of solvate.
 #
 #   Copyright by the Authors and individual contributors. All rights reserved.
 #
@@ -14,7 +14,7 @@
 #   \author    Michal Tykac
 #   \author    Lada Biedermannová
 #   \author    Jiří Černý
-#   \version   0.0.1
+#   \version   0.0.2
 #   \date      SEP 2020
 ######################################################
 
@@ -24,33 +24,32 @@
 import time                                           ### For timing
 import sys                                            ### Access to the argvs and exit
 
-import solvate_globals                                ### Global variables
-
 ######################################################
 # startLog
-def startLog ( ):
+def startLog ( settings ):
     """
     This function opens the logfile and writes the initial information.
 
     Parameters
     ----------
-    NONE
+    solvate_globals.globalSettings : settings
+        Instance of the settings class contaning all the options and values.
 
     Returns
     -------
     NONE
 
     """
-    solvate_globals._logFile                          = open ( solvate_globals._logPath, "w" )
-    solvate_globals._logFile.write                    ( "Starting solvate (v" + str( solvate_globals._version ) + ") run:\n" )
-    solvate_globals._logFile.write                    ( "==============================\n\n" )
-    
-    solvate_globals._logFile.write                    ( "CALL:\n   " )
-    solvate_globals._logFile.write                    ( " ".join ( sys.argv ) + "\n\n" )
-    
-    solvate_globals._logFile.write                    ( "PARSED ARGS:\n" )
-    solvate_globals._logFile.write                    ( "   Log path          : " + str( solvate_globals._logPath ) + "\n" )
-    solvate_globals._logFile.write                    ( "   Input file        : " + str( solvate_globals._inputCoordinateFile ) + "\n\n" )
+    settings.logFile                                  = open ( settings.logPath, "w" )
+    settings.logFile.write                            ( "Starting solvate (v" + str( settings.getVersion () ) + ") run:\n" )
+    settings.logFile.write                            ( "==============================\n\n" )
+            
+    settings.logFile.write                            ( "CALL:\n   " )
+    settings.logFile.write                            ( " ".join ( sys.argv ) + "\n\n" )
+            
+    settings.logFile.write                            ( "PARSED ARGS:\n" )
+    settings.logFile.write                            ( "   Log path          : " + str( settings.logPath ) + "\n" )
+    settings.logFile.write                            ( "   Input file        : " + str( settings.inputCoordinateFile ) + "\n\n" )
 #    solvate_globals._logFile.write                    ( "   Output file       : " + str( outputName ) + "\n" )
 #    solvate_globals._logFile.write                    ( "   Fragments loc.    : " + str( fragInputDir ) + "\n" )
 #    solvate_globals._logFile.write                    ( "   Residues loc.     : " + str( resInputDir ) + "\n" )
@@ -69,18 +68,19 @@ def startLog ( ):
 #    solvate_globals._logFile.write                    ( "   Protein only      : " + str( protOnly ) + "\n" )
 #    solvate_globals._logFile.write                    ( "   Pre-sort backbone : " + str( useBackbone ) + "\n\n" )
 
-    solvate_globals._logFile.write                    ( "RUN:\n" )
+    settings.logFile.write                            ( "RUN:\n" )
     
 
 ######################################################
 # endLog
-def endLog ( ):
+def endLog ( settings, terminate = True ):
     """
     This function closes the logfile and writes the final information.
 
     Parameters
     ----------
-    NONE
+    solvate_globals.globalSettings : settings
+        Instance of the settings class contaning all the options and values.
 
     Returns
     -------
@@ -88,16 +88,17 @@ def endLog ( ):
 
     """
     ### Write final message
-    elapsed_time                                      = time.time () - solvate_globals._start_time
-    solvate_globals._logFile.write                    ( "\nTime taken: %.3f seconds\n" % elapsed_time )
-    solvate_globals._logFile.close                    ( )
+    elapsed_time                                      = time.time () - settings.start_time
+    settings.logFile.write                            ( "\nTime taken: %.3f seconds\n" % elapsed_time )
+    settings.logFile.close                            ( )
     
     ### Terminate
-    sys.exit                                          ( )
+    if terminate:
+        sys.exit                                      ( )
 
 ######################################################
 # writeLog
-def writeLog ( logEntry, indent = 1 ):
+def writeLog ( logEntry, settings, indent = 1 ):
     """
     This function writes the supplied string into the log.
 
@@ -105,6 +106,9 @@ def writeLog ( logEntry, indent = 1 ):
     ----------
     str : logEntry
         This is the string that should be written into the log.
+        
+    solvate_globals.globalSettings : settings
+        Instance of the settings class contaning all the options and values.
         
     int : indent
         How much indented should this log entry be?
@@ -122,8 +126,8 @@ def writeLog ( logEntry, indent = 1 ):
         outputText                                    = outputText + "... "
         
     ### Write to log
-    solvate_globals._logFile.write                    ( str ( outputText ) + str ( logEntry ) + "\n" )
+    settings.logFile.write                            ( str ( outputText ) + str ( logEntry ) + "\n" )
     
     ### Write to stdout
-    if solvate_globals._verbose >= indent:
+    if settings.verbose >= indent:
         print                                         ( outputText + logEntry )

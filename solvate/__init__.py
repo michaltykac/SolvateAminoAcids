@@ -1,6 +1,9 @@
 # -*- coding: UTF-8 -*-
-#   \file solvate_globals.py
-#   \brief This file provides global variables to all other files.
+#   \file __init__.py
+#   \brief This file initialises the package.
+#
+#   This file firstly denotes this folder as containing python package and secondly it makes some of the solvate
+#   parts easily accessible.
 #
 #   Copyright by the Authors and individual contributors. All rights reserved.
 #
@@ -14,37 +17,11 @@
 #   \author    Michal Tykac
 #   \author    Lada Biedermannová
 #   \author    Jiří Černý
-#   \version   0.0.1
+#   \version   0.0.2
 #   \date      SEP 2020
 ######################################################
 
-######################################################
-# Imports
-
-import time                                           ### For timing
-
-######################################################
-# Global variables
-
-_version                                              = "0.0.1"
-
-_verbose                                              = 1
-
-_logPath                                              = "solvate_log.txt"
-_logFile                                              = None
-
-_inputCoordinateFile                                  = ""
-
-_resInputDir                                          = "resData"
-_fragInputDir                                         = "fragData"
-
-_start_time                                           = time.time()
-
-_aaTypes                                              = [ "ALA", "ARG", "ASN", "ASP", "CYS", "GLN", "GLU",
-                                                          "GLY", "HIS", "ILE", "LEU", "LYS", "MET", "PHE",
-                                                          "PRO", "SER", "THR", "TRP", "TYR", "VAL" ]
-
-_useBackboneAtoms                                     = False
-_bestFragmentOnly                                     = False
-
-_RMSDthreshold                                        = 0.5
+from solvate.solvate_globals import globalSettings
+from solvate.solvate_log import startLog, endLog
+from solvate.solvate_structures import parseInputCoordinates
+from solvate.solvate_matchFragments import matchFragments

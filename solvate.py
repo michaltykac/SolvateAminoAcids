@@ -1,9 +1,9 @@
 # -*- coding: UTF-8 -*-
 ## @package solvate
 #   \file solvate.py
-#   \brief Solvate is a Python language module for assigning water molecules to macromolecular structures.
+#   \brief ...
 #
-#   ...
+#   This file
 #
 #   Copyright by the Authors and individual contributors. All rights reserved.
 #
@@ -17,55 +17,32 @@
 #   \author    Michal Tykac
 #   \author    Lada Biedermannová
 #   \author    Jiří Černý
-#   \version   0.0.1
+#   \version   0.0.2
 #   \date      SEP 2020
 ######################################################
 
 ######################################################
 # Imports
 
-import solvate_globals                                ### Global variables
-import solvate_commandLineArgs                        ### Command line arguments parsing
-import solvate_log                                    ### Writing log
-import solvate_structures                             ### Structures manipulation
-import solvate_matchFragments                         ### Fragment matching
+import solvate
 
 ######################################################
-# Get the args
-clArgs                                                = solvate_commandLineArgs.getCLArgs ()
-
-if clArgs.log is not None:
-    solvate_globals._logPath                          = str ( clArgs.log[0] )
-if clArgs.i is not None:
-    solvate_globals._inputCoordinateFile              = str ( clArgs.i[0] )
-if clArgs.r is not None:
-    solvate_globals._RMSDthreshold                    = float ( clArgs.r[0] )
-if clArgs.res is not None:
-    solvate_globals._resInputDir                      = str ( clArgs.res[0] )
-if clArgs.frag is not None:
-    solvate_globals._fragInputDir                     = str ( clArgs.frag[0] )
-if clArgs.verbose is not None:
-    solvate_globals._verbose                          = int ( clArgs.verbose[0] )
-    
-solvate_globals._bestFragmentOnly                     = clArgs.bestOnly
-solvate_globals._useBackboneAtoms                     = clArgs.b
+# Create and set global settings
+settings                                              = solvate.globalSettings ( )
+settings.parseCommandLineArguments                    ( )
 
 ######################################################
 # Start the log
-solvate_log.startLog                                  ( )
+solvate.startLog                                      ( settings )
 
 ######################################################
-# Read in the co-ordinate file
-inputCoords                                           = solvate_structures.readInCoordinates ( solvate_globals._inputCoordinateFile )
-
-######################################################
-# Parse co-ordinates for solvate speed-up
-resList                                               = solvate_structures.parseOutCoords ( inputCoords )
+# Read in the structure and parse out required information
+resList                                               = solvate.parseInputCoordinates ( settings )
 
 ######################################################
 # Match fragments to each residue
-matchedFrags                                          = solvate_matchFragments.matchFragments ( resList )
+matchedFrags                                          = solvate.matchFragments ( resList, settings )
 
 ######################################################
 # Terminate
-solvate_log.endLog                                    ( )
+solvate.endLog                                        ( settings )

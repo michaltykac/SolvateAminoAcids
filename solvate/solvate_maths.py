@@ -14,7 +14,7 @@
 #   \author    Michal Tykac
 #   \author    Lada Biedermannová
 #   \author    Jiří Černý
-#   \version   0.0.1
+#   \version   0.0.2
 #   \date      SEP 2020
 ######################################################
 
@@ -23,12 +23,11 @@
 
 import numpy                                          ### Maths
 
-import solvate_globals                                ### Global variables
-import solvate_log                                    ### For writing the log
+import solvate.solvate_log as solvate_log             ### For writing the log
 
 ######################################################
 # residueToResFragmentDistance_backbone ()
-def residueToResFragmentDistance_backbone ( res, resFrag ):
+def residueToResFragmentDistance_backbone ( res, resFrag, settings ):
     """
     This function computes the procrustes optimal overlay of the backbone atoms of the input residue and
     hydrated residue fragment and then proceeds to obtain the RMSD of these backbone atoms.
@@ -40,6 +39,9 @@ def residueToResFragmentDistance_backbone ( res, resFrag ):
         
     list : resFrag
         A list containing the positions and names of the hydrated residue frament atoms.
+        
+    solvate_globals.globalSettings : settings
+        Instance of the settings class contaning all the options and values.
 
     Returns
     -------
@@ -58,10 +60,10 @@ def residueToResFragmentDistance_backbone ( res, resFrag ):
 
     ### Sanity check
     if len( resAts ) != 4:
-        solvate_log.writeLog                          ( "!!! ERROR !!! Could not find all backbone atoms (C, CA, N and O) in the residue described by " + str( res ), 0 )
+        solvate_log.writeLog                          ( "!!! ERROR !!! Could not find all backbone atoms (C, CA, N and O) in the residue described by " + str( res ), settings, 0 )
         
         # Terminate
-        solvate_log.endLog                            ( )
+        solvate_log.endLog                            ( settings )
     
     ### Reduce hydrated residue fragment to N, Ca, C and O (backbone) atoms
     fraAts                                            = []
@@ -72,10 +74,10 @@ def residueToResFragmentDistance_backbone ( res, resFrag ):
         
     ### Sanity check
     if len( fraAts ) != 4:
-        solvate_log.writeLog                          ( "!!! ERROR !!! Could not find all backbone atoms (C, CA, N and O) in the supplied hydrated fragment " + str ( resFrag ), 0 )
+        solvate_log.writeLog                          ( "!!! ERROR !!! Could not find all backbone atoms (C, CA, N and O) in the supplied hydrated fragment " + str ( resFrag ), settings, 0 )
         
         # Terminate
-        solvate_log.endLog                            ( )
+        solvate_log.endLog                            ( settings )
     
     ### Convert to numpy arrays
     resNumpy                                          = numpy.array ( [ numpy.array ( xi ) for xi in resAts ] )
@@ -88,14 +90,14 @@ def residueToResFragmentDistance_backbone ( res, resFrag ):
     rmsdDist                                          = getRMSD ( resAts, z )
     
     ### Report log
-    solvate_log.writeLog                              ( "Found residue to hydrated residue fragment distance of " + str( rmsdDist ), 4 )
+    solvate_log.writeLog                              ( "Found residue to hydrated residue fragment distance of " + str( rmsdDist ), settings, 5 )
     
     ### Done
     return                                            ( rmsdDist, t )
     
 ######################################################
 # residueToResFragmentDistance_rotamer ()
-def residueToResFragmentDistance_rotamer ( res, resFrag ):
+def residueToResFragmentDistance_rotamer ( res, resFrag, settings ):
     """
     This function computes the procrustes optimal overlay of the side-chain atoms of the input residue and
     hydrated residue fragment and then proceeds to obtain the RMSD of these side-chain atoms.
@@ -107,6 +109,9 @@ def residueToResFragmentDistance_rotamer ( res, resFrag ):
         
     list : resFrag
         A list containing the positions and names of the hydrated residue frament atoms.
+        
+    solvate_globals.globalSettings : settings
+        Instance of the settings class contaning all the options and values.
 
     Returns
     -------
@@ -138,7 +143,7 @@ def residueToResFragmentDistance_rotamer ( res, resFrag ):
 
     ### Sanity check
     if len ( resAts ) != 4:
-        solvate_log.writeLog                          ( "!!! ERROR !!! Could not find all side-chain atoms (C, CA, CB and ?) in the supplied residue " + str ( res ), 0 )
+        solvate_log.writeLog                          ( "!!! ERROR !!! Could not find all side-chain atoms (C, CA, CB and ?) in the supplied residue " + str ( res ), settings, 0 )
         
         # Terminate
         solvate_log.endLog                            ( )
@@ -158,7 +163,7 @@ def residueToResFragmentDistance_rotamer ( res, resFrag ):
                 
     ### Sanity check
     if len ( fraAts ) != 4:
-        solvate_log.writeLog                          ( "!!! ERROR !!! Could not find all side-chain atoms (C, CA, CB and ?) in the supplied hydrated residue fragment " + str ( resFrag ), 0 )
+        solvate_log.writeLog                          ( "!!! ERROR !!! Could not find all side-chain atoms (C, CA, CB and ?) in the supplied hydrated residue fragment " + str ( resFrag ), settings, 0 )
         
         # Terminate
         solvate_log.endLog                            ( )
@@ -174,14 +179,14 @@ def residueToResFragmentDistance_rotamer ( res, resFrag ):
     rmsdDist                                          = getRMSD ( resAts, z )
     
     ### Report log
-    solvate_log.writeLog                              ( "Found residue to hydrated residue fragment distance of " + str( rmsdDist ), 4 )
+    solvate_log.writeLog                              ( "Found residue to hydrated residue fragment distance of " + str( rmsdDist ), settings, 4 )
     
     ### Done
     return                                            ( rmsdDist, t )
 
 ######################################################
 # residueToResFragmentDistance_direct ()
-def residueToResFragmentDistance_direct ( res, fragInfo ):
+def residueToResFragmentDistance_direct ( res, fragInfo, settings ):
     """
     This function computes the procrustes optimal overlay of all available atoms
     and then proceeds to obtain the RMSD of these atoms.
@@ -193,6 +198,9 @@ def residueToResFragmentDistance_direct ( res, fragInfo ):
         
     list : fragInfo
         A list containing the positions and names of the hydrated frament atoms.
+        
+    solvate_globals.globalSettings : settings
+        Instance of the settings class contaning all the options and values.
 
     Returns
     -------
@@ -220,7 +228,7 @@ def residueToResFragmentDistance_direct ( res, fragInfo ):
     
     ### Check for missing atoms
     if len ( fragInfo ) != len ( resAtoms ):
-        solvate_log.writeLog                          ( "!!! ERROR !!! Failed to match the fragment atoms of fragment " + str ( fragInfo ) + " to residue " + str( res ), 0 )
+        solvate_log.writeLog                          ( "!!! ERROR !!! Failed to match the fragment atoms of fragment " + str ( fragInfo ) + " to residue " + str( res ), settings, 0 )
     
         # Terminate
         solvate_log.endLog                            ( )
@@ -237,7 +245,7 @@ def residueToResFragmentDistance_direct ( res, fragInfo ):
     rmsdDist                                          = getRMSD ( resAtoms, z )
     
     ### Report log
-    solvate_log.writeLog                              ( "Found residue to hydrated fragment distance of " + str( rmsdDist ), 4 )
+    solvate_log.writeLog                              ( "Found residue to hydrated fragment distance of " + str( rmsdDist ), settings, 5 )
     
     ### Done
     return                                            ( rmsdDist, t )

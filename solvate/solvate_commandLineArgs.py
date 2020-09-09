@@ -2,7 +2,8 @@
 #   \file solvate_commandLineArgs.py
 #   \brief This file provides functionality for command line parsing.
 #
-#   This file contains functions and settings used to parse command line arguments.
+#   This file contains functions and settings used to parse command line arguments. None of these functions should
+#   be directly accessible from the python module or the python tool, they are for internal purposes only.
 #
 #   Copyright by the Authors and individual contributors. All rights reserved.
 #
@@ -16,7 +17,7 @@
 #   \author    Michal Tykac
 #   \author    Lada Biedermannová
 #   \author    Jiří Černý
-#   \version   0.0.1
+#   \version   0.0.2
 #   \date      SEP 2020
 ######################################################
 
@@ -26,8 +27,6 @@
 import argparse                                       ### Command line arguments parser
 import sys                                            ### In the case complete stop is needed
 import os                                             ### Checking for file existence
-
-import solvate_globals                                ### Global variables
 
 ######################################################
 # Description
@@ -45,14 +44,15 @@ Written by: Michal Tykac for BTU AVCR in 2019 and 2020."""
 
 ######################################################
 # getCLArgs function
-def getCLArgs ( ):
+def getCLArgs ( version ):
     """
     This function deals with all the command line parsing details and returns the Namespace with all available
     values.
 
     Parameters
     ----------
-    NONE
+    str : version
+        String defining the version of the tool.
 
     Returns
     -------
@@ -116,7 +116,7 @@ def getCLArgs ( ):
                           help                        = 'The path to where the log will be written to. Defaults to \"solvate_log.txt\".' )
     
     ### Version
-    parser.add_argument('--version', action = 'version', version = '%(prog)s ' + str( solvate_globals._version ) )
+    parser.add_argument('--version', action = 'version', version = '%(prog)s ' + str( version ) )
 
     ### Parse the input command line arguments
     args                                              = parser.parse_args()
