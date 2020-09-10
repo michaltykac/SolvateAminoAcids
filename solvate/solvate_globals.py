@@ -25,7 +25,10 @@
 ######################################################
 # Imports
 
+import sys                                            ### Terminating if fail
+import os                                             ### Creating directories
 import time                                           ### For timing
+import gemmi                                          ### For checking its instances
 import solvate.solvate_commandLineArgs as cl          ### For command line parsing
 
 ######################################################
@@ -66,10 +69,12 @@ class globalSettings:
         
         ### Set input structure
         self.inputCoordinateFile                      = ""
+        self.inputCoordinateStructure                 = None
         
         ### Set the hydrated data paths
         self.resInputDir                              = "resData"
         self.fragInputDir                             = "fragData"
+        self.matchedFragsPath                         = ""
         
         ### List all supported amino acids
         self.aaTypes                                  = [ "ALA", "ARG", "ASN", "ASP", "CYS", "GLN", "GLU",
@@ -217,6 +222,51 @@ class globalSettings:
 
         """
         self.useBackboneAtoms                         = useBack
+        
+    def setInputStructure ( self, struct ):
+        """
+        This mutator function sets the supplied gemmi.Structure object as the structure which
+        should be hydrated.
+
+        Parameters
+        ----------
+        gemmi.Structure : struct
+            The gemmi.Structure object for the structure to be hydrated.
+
+        Returns
+        -------
+        NONE
+
+        """
+        ### Check that this is a gemmi object!
+        if not isinstance ( struct, gemmi.Structure ):
+            sys.exit                                  ( 'Error: The supplied structure ' + str( struct ) + ' is not an instance of gemmi.Structure. Please supply a file parsed by gemmi.' )
+            
+        ### If so, set
+        self.inputCoordinateStructure                 = struct
+        
+    def setMatchedFragsPath ( self, mfPath ):
+        """
+        This mutator function sets the path to where hydrated fragment - residue matches should
+        be written into.
+
+        Parameters
+        ----------
+        str : mfPath
+            The path to where to save the matches.
+
+        Returns
+        -------
+        NONE
+
+        """
+        ### If so, set
+        self.matchedFragsPath                         = mfPath
+        
+        ### If not empty, create unless exists
+        if ( self.matchedFragsPath != "" ) and ( not os.path.isdir ( self.matchedFragsPath ) ):
+            os.makedirs                               ( self.matchedFragsPath )
+        
 
     def parseCommandLineArguments ( self ):
         """
@@ -253,6 +303,9 @@ class globalSettings:
 
         if clArgs.verbose is not None:
             self.setVerbose                           ( int ( clArgs.verbose[0] ) )
+            
+        if clArgs.matchedFrags is not None:
+            self.setMatchedFragsPath                  ( str ( clArgs.matchedFrags[0] ) )
 
         self.setBestFragOnly                          ( clArgs.bestOnly )
         self.setUseBackbone                           ( clArgs.b )

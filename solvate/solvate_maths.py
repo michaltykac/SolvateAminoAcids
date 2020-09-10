@@ -22,7 +22,6 @@
 # Imports
 
 import numpy                                          ### Maths
-
 import solvate.solvate_log as solvate_log             ### For writing the log
 
 ######################################################

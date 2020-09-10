@@ -114,6 +114,12 @@ def getCLArgs ( version ):
                           type                        = str,
                           nargs                       = 1,
                           help                        = 'The path to where the log will be written to. Defaults to \"solvate_log.txt\".' )
+                          
+    ### Input matched fragments location
+    parser.add_argument ( '--matchedFrags',
+                          type                        = str,
+                          nargs                       = 1,
+                          help                        = 'The path to the folder where structures with matched fragmet to residue will be saved to. Note, that the folder will be created unless it already exists with the notable exception of value \"\" (the dafelu), in which case nothing will be created or written')
     
     ### Version
     parser.add_argument('--version', action = 'version', version = '%(prog)s ' + str( version ) )
@@ -123,9 +129,9 @@ def getCLArgs ( version ):
     
     ### Check for mandatory arguments
     if args.i is None or args.i[0] == "" or args.i[0] == " ":
-        sys.exit ( 'Error: Missing input file. Please supply a co-ordinate file using the -i command line option or use -h for help.' )
+        sys.exit                                      ( 'Error: Missing input file. Please supply a co-ordinate file using the -i command line option or use -h for help.' )
         
     if not os.path.isfile ( args.i[0] ):
-        sys.exit ( 'Error: The supplied co-ordinate file ' + args.i[0] + ' does not seem to exist. Please supply a different file.' )
+        sys.exit                                      ( 'Error: The supplied co-ordinate file ' + args.i[0] + ' does not seem to exist. Please supply a different file.' )
     
     return ( args )

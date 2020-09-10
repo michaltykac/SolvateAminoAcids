@@ -24,4 +24,7 @@
 from solvate.solvate_globals import globalSettings
 from solvate.solvate_log import startLog, endLog
 from solvate.solvate_structures import parseInputCoordinates
+from solvate.solvate_structures import getAllFragmentFragments
+from solvate.solvate_structures import getAllResidueFragments
 from solvate.solvate_matchFragments import matchFragments
+from solvate.solvate_predictWaters import predictWaters

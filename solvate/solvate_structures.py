@@ -50,6 +50,9 @@ def parseInputCoordinates ( settings ):
     ### Read in the structure
     inputCoords                                       = readInCoordinates ( settings )
     
+    ### Save for later
+    settings.setInputStructure                        ( inputCoords )
+    
     ### Get residue list
     resList                                           = parseOutCoords ( inputCoords, settings )
     

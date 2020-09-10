@@ -40,8 +40,19 @@ solvate.startLog                                      ( settings )
 resList                                               = solvate.parseInputCoordinates ( settings )
 
 ######################################################
+# Read in fragments and residues
+fragFragments                                         = solvate.getAllFragmentFragments ( settings )
+resFragments                                          = {}
+if settings.useBackboneAtoms:
+    resFragments                                      = solvate.getAllResidueFragments ( settings )
+
+######################################################
 # Match fragments to each residue
-matchedFrags                                          = solvate.matchFragments ( resList, settings )
+matchedFrags                                          = solvate.matchFragments ( resList, fragFragments, resFragments,  settings )
+
+######################################################
+# Predict waters for co-ordinates
+waters                                                = solvate.predictWaters ( resList, matchedFrags, fragFragments, settings )
 
 ######################################################
 # Terminate

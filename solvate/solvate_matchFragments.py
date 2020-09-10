@@ -39,7 +39,7 @@ import solvate.solvate_maths as solvate_maths         ### Computing distances an
 
 ######################################################
 # matchFragments
-def matchFragments ( resList, settings ):
+def matchFragments ( resList, fragFragments, resFragments, settings ):
     """
     This function takes all supplied residues and finds the optimal/threshold passing
     hydrated fragments for each of the residues. It can use either only the best aligned
@@ -56,6 +56,14 @@ def matchFragments ( resList, settings ):
     ----------
     list : resList
         The list of all residues as returned by parseOutCoords() function.
+        
+    list : fragFragments
+        The list of all found and parsed hydrated fragment files with their
+        protein and waters atom placed into a dictionary.
+        
+    list : resFragments
+        The list of all found and parsed hydrated residue files with their
+        protein and waters atom placed into a dictionary.
         
     solvate_globals.globalSettings : settings
         Instance of the settings class contaning all the options and values.
@@ -74,12 +82,6 @@ def matchFragments ( resList, settings ):
     ### Initialise variables
     resInd                                            = 0
     resMatches                                        = []
-    
-    ### Read in fragments and residues
-    fragFragments                                     = solvate_structures.getAllFragmentFragments ( settings )
-    resFragments                                      = {}
-    if settings.useBackboneAtoms:
-        resFragments                                  = solvate_structures.getAllResidueFragments ( settings )
     
     ### For each amino acid
     for res in resList:
