@@ -109,6 +109,9 @@ def matchFragments ( resList, fragFragments, resFragments, settings ):
             ### Match the residue to hydrated fragments using backbone step
             resMatches.append                         ( matchFragmentsDirect ( res, fragFragments, settings ) )
 
+    ### Log progress
+    solvate_log.writeLog                              ( "Fragment matching complete", settings, 2 )
+
     ### Done
     return                                            ( resMatches )
 

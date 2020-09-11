@@ -109,6 +109,12 @@ def getCLArgs ( version ):
                           action                      = 'store_true',
                           help                        = 'If used, only the best fragment will be used as a match to the residue.' )
    
+    ### Clash radius
+    parser.add_argument ( '--clRad',
+                          type                        = float,
+                          nargs                       = 1,
+                          help                        = 'The radius which must not have any atoms if there is to be no clash. The default value is 2.0.')
+   
     ### Change the log file name
     parser.add_argument ( '--log',
                           type                        = str,
@@ -120,6 +126,26 @@ def getCLArgs ( version ):
                           type                        = str,
                           nargs                       = 1,
                           help                        = 'The path to the folder where structures with matched fragmet to residue will be saved to. Note, that the folder will be created unless it already exists with the notable exception of value \"\" (the dafelu), in which case nothing will be created or written')
+    
+    ### Do NOT use the full structure for clash detection
+    parser.add_argument ( '--noFullStr',
+                          action                      = 'store_true',
+                          help                        = 'By default, solvate will use all structure contentes to detect clashes of any predicted waters. This option turns that off.' )
+                          
+    ### Produce water predictions ignoring any clashes with hydrogens
+    parser.add_argument ( '--noHydro',
+                          action                      = 'store_true',
+                          help                        = 'Should solvate produce another set of results ignoring the hydrogen atoms clashes with the predicted waters?' )
+           
+    ### Produce water predictions ignoring any clashes with already present waters
+    parser.add_argument ( '--noWaters',
+                          action                      = 'store_true',
+                          help                        = 'Should solvate produce another set of results ignoring the already present water molecule clashes with the predicted waters?' )
+    
+    ### Produce water predictions ignoring any clashes with already present waters
+    parser.add_argument ( '--noLigand',
+                          action                      = 'store_true',
+                          help                        = 'Should solvate produce another set of results ignoring the ligand molecule clashes with the predicted waters?' )
     
     ### Version
     parser.add_argument('--version', action = 'version', version = '%(prog)s ' + str( version ) )

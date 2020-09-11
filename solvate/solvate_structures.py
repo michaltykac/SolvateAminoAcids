@@ -25,8 +25,10 @@ import sys                                            ### In the case complete s
 import os                                             ### Checking for file existence
 import glob                                           ### Listing all files in folder
 import gemmi                                          ### Library of choice for structure reading/writing
+import numpy                                          ### Get numpy.array's
 
 import solvate.solvate_log as solvate_log             ### For writing the log
+import solvate.solvate_maths as solvate_maths         ### Atom rotation and translation
 
 ######################################################
 # parseInputCoordinates ()
@@ -327,3 +329,175 @@ def getAllFragmentFragments ( settings ):
     
     ### Done
     return                                            ( ret )
+
+######################################################
+# prepareMatchFile ()
+def prepareMatchFile ( residue, fragment, transform, settings ):
+    """
+    This function creates a gemmi.Model object and fills it with two chains. The first
+    chain call "A" will contain all original residue atoms, while the second chain "B"
+    will contain the hydrated fragment protein atoms rotated and translated to best match
+    the residue atoms.
+    
+    If such model will not be writte, the function returns None instead to save time and
+    memory.
+
+    Parameters
+    ----------
+    list : residue
+        A list of all the atoms found in this particular residue.
+        
+    dictionary : fragment
+        A dictionary with two entries, "protein" containing all protein atoms and
+        "waters" containing all water atoms.
+        
+    dictionary : transform
+        The result of the procrustes analysis (t) containing the "rotation" entry
+        with the optimal rotation matrix and "translation" entry with the optimal
+        translation vector.
+    
+    solvate_globals.globalSettings : settings
+        Instance of the settings class contaning all the options and values.
+
+    Returns
+    -------
+    gemmi.Model : model
+        Gemmi Model object, which now contains two chains, the "A" chain with the original
+        residue atoms and the "B" model with the rotated and translated hydrated-fragment
+        atoms.
+
+    """
+    ### If required
+    if settings.matchedFragsPath != "":
+        
+        ### Initialise residue chain variables
+        resModel                                      = gemmi.Model ( "1" )
+        resChain                                      = gemmi.Chain ( "A" )
+        resRes                                        = gemmi.Residue ( )
+        
+        ### For each residue atom
+        for at in residue[1]:
+        
+            ### Set the atom info
+            resAtom                                   = gemmi.Atom ( )
+            resAtom.name                              = at[0]
+            resAtom.pos                               = gemmi.Position ( at[1], at[2], at[3] )
+            resAtom.occ                               = at[4]
+            resAtom.b_iso                             = at[5]
+            resRes.add_atom                           ( resAtom )
+            
+        ### Set the residue info and add to chain and model
+        resRes.name                                   = residue[0]
+        resRes.seqid                                  = gemmi.SeqId ( 1, ' ' )
+        resRes.entity_type                            = gemmi.EntityType.Polymer
+        resChain.add_residue                          ( resRes )
+        resModel.add_chain                            ( resChain )
+        
+        ### Initialise fragment chain variables
+        fragChain                                     = gemmi.Chain ( "B" )
+        fragRes                                       = gemmi.Residue ( )
+        
+        ### For each fragment protein atom
+        for at in fragment["protein"]:
+        
+            ### Rotate and translate each protein atom
+            fragAtomPos                               = numpy.array ( [ at[1],
+                                                                        at[2],
+                                                                        at[3] ] )
+            fragAtomPos                               = solvate_maths.rotateAndTranslateAtom ( fragAtomPos, transform )
+                        
+            ### Set the atom info
+            fragAtom                                  = gemmi.Atom ( )
+            fragAtom.name                             = at[0]
+            fragAtom.pos                              = gemmi.Position ( fragAtomPos[0], fragAtomPos[1], fragAtomPos[2] )
+            fragAtom.occ                              = at[4]
+            fragAtom.b_iso                            = at[5]
+            fragRes.add_atom                          ( fragAtom )
+            
+        ### Set the residue information and add to chain and model and structure
+        fragRes.name                                  = residue[0]
+        fragRes.seqid                                 = gemmi.SeqId ( 1, ' ' )
+        fragRes.entity_type                           = gemmi.EntityType.Polymer
+        fragChain.add_residue                         ( fragRes )
+        resModel.add_chain                            ( fragChain )
+        
+        ### Done
+        return                                        ( resModel )
+        
+    else:
+        ### Writing not required. Just return None
+        model                                         = None
+        return                                        ( model )
+        
+######################################################
+# completeAndWriteMatchFile ()
+def completeAndWriteMatchFile ( resModel, matchedWaters, matchFileName, settings ):
+    """
+    This function takes the prepared model, adds the now rotated and translated water molecules
+    and proceeds to write the file to the disk. If, however, this is not required, then it does
+    nothing and just ends.
+
+    Parameters
+    ----------
+    gemmi.Model : model
+        Gemmi Model object, which contains two chains, the "A" chain with the original
+        residue atoms and the "B" chain with the rotated and translated hydrated-fragment
+        atoms.
+    
+    list : matchedWaters
+        A list of all water atoms matched to this residue, with their positions rotated
+        and translated to fir the residue already.
+        
+    str : matchFileName
+        A filename to where the file should be save to.
+        
+    solvate_globals.globalSettings : settings
+        Instance of the settings class contaning all the options and values.
+
+    Returns
+    -------
+    NONE
+
+    """
+    ### If required
+
+    if resModel is not None:
+    
+        ### Create water chain and add it
+        watChain                                      = gemmi.Chain ( "W" )
+                    
+        ### For each water atom
+        resCtr                                        = 1
+        for at in matchedWaters:
+                    
+            ### Set the atom info
+            watAtom                                   = gemmi.Atom ( )
+            watAtom.name                              = str ( at[3] )
+            watAtom.pos                               = gemmi.Position ( float ( at[0] ) , float ( at[1] ), float ( at[2] ) )
+            watAtom.occ                               = float ( at[4] )
+            watAtom.b_iso                             = float ( at[5] )
+            watAtom.charge                            = 0
+            watAtom.element                           = gemmi.Element ( "O" )
+        
+            ### Set the residue information and add to chain
+            watRes                                    = gemmi.Residue ( )
+            watRes.add_atom                           ( watAtom )
+            watRes.name                               = "HOH"
+            watRes.seqid                              = gemmi.SeqId ( resCtr, ' ' )
+            watRes.entity_type                        = gemmi.EntityType.Water
+            watChain.add_residue                      ( watRes )
+            resCtr                                    = resCtr + 1
+            
+        ### Complete the chain and add to model and to structure
+        resModel.add_chain                            ( watChain )
+        matchStr                                      = gemmi.Structure ( )
+        matchStr.add_model                            ( resModel )
+        
+        ### Write fragment-residue match
+        matchStr.write_pdb                            ( os.path.join ( settings.matchedFragsPath, matchFileName ) )
+        
+        ### Report progress
+        solvate_log.writeLog                          ( "Written matched hydrated fragment to residue alignement file with water to " + str( matchFileName ), settings, 4 )
+        
+        ### Done
+        return

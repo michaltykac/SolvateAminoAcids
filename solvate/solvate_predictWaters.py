@@ -26,6 +26,7 @@
 import numpy                                          ### Maths
 import solvate.solvate_log as solvate_log             ### Writing log
 import solvate.solvate_maths as solvate_maths         ### Computing distances and rotations
+import solvate.solvate_structures as solvate_structures ### Fragment match file creation
 import gemmi                                          ### File reading and writing
 import os
 
@@ -33,7 +34,16 @@ import os
 # predictWaters ()
 def predictWaters ( resList, matchedFrags, fragFragments, settings ):
     """
-    ...
+    This function takes the parsed residues, the list of all matched fragments to each residue and
+    the list of all parsed fragments and proceeds to rotate and translate all the water molecules
+    so that they would have the same position relative to the input structure residue as the matched
+    fragment, effectively adding the waters from hydrated fragments to the residues.
+    
+    If the matched fragments folder path is set, then this function will also write a PDB file for
+    each residue-fragment match to allow re-viewing how good the matches are.
+    
+    Warning: There is no checking for the water molecules to the co-ordinates. It is expected that
+    this will be done later, beforer wirting these water into anywhere.
 
     Parameters
     ----------
@@ -53,7 +63,10 @@ def predictWaters ( resList, matchedFrags, fragFragments, settings ):
 
     Returns
     -------
-    NONE
+    list : waters
+        List of all water molecules obtained from the assigned hydrated matched fragments for each
+        residue. These water molecules are rotated and translated to be in appropriate positions
+        to the residue position.
 
     """
     ### Log progress
@@ -88,63 +101,7 @@ def predictWaters ( resList, matchedFrags, fragFragments, settings ):
                 solvate_log.writeLog                  ( "Rotating and translating waters from fragment " + str( frName ), settings, 3 )
                 
                 ### If required, open the fragment file and add the residue as another chain
-                matchStr                              = None
-                if settings.matchedFragsPath != "":
-                    
-                    ### Create new structure
-                    matchStr                          = gemmi.Structure ( )
-                    
-                    ### Initialise residue chain variables
-                    resModel                          = gemmi.Model ( "1" )
-                    resChain                          = gemmi.Chain ( "A" )
-                    resRes                            = gemmi.Residue ( )
-                    
-                    ### For each residue atom
-                    for at in resList[res][1]:
-                    
-                        ### Set the atom info
-                        resAtom                       = gemmi.Atom ( )
-                        resAtom.name                  = at[0]
-                        resAtom.pos                   = gemmi.Position ( at[1], at[2], at[3] )
-                        resAtom.occ                   = at[4]
-                        resAtom.b_iso                 = at[5]
-                        resRes.add_atom               ( resAtom )
-                        
-                    ### Set the residue info and add to chain and model
-                    resRes.name                       = resList[res][0]
-                    resRes.seqid                      = gemmi.SeqId ( 1, ' ' )
-                    resRes.entity_type                = gemmi.EntityType.Polymer
-                    resChain.add_residue              ( resRes )
-                    resModel.add_chain                ( resChain )
-                    
-                    ### Initialise fragment chain variables
-                    fragChain                         = gemmi.Chain ( "B" )
-                    fragRes                           = gemmi.Residue ( )
-                    
-                    ### For each fragment protein atom
-                    for at in fragFragments[frName]["protein"]:
-                    
-                        ### Rotate and translate each protein atom
-                        fragAtomPos                   = numpy.array ( [ at[1],
-                                                                        at[2],
-                                                                        at[3] ] )
-                        fragAtomPos                   = numpy.matmul ( fragAtomPos, matchedFrags[res][frag][frName]["rotation"] )
-                        fragAtomPos                   = fragAtomPos + matchedFrags[res][frag][frName]["translation"]
-                        
-                        ### Set the atom info
-                        fragAtom                      = gemmi.Atom ( )
-                        fragAtom.name                 = at[0]
-                        fragAtom.pos                  = gemmi.Position ( fragAtomPos[0], fragAtomPos[1], fragAtomPos[2] )
-                        fragAtom.occ                  = at[4]
-                        fragAtom.b_iso                = at[5]
-                        fragRes.add_atom              ( fragAtom )
-                        
-                    ### Set the residue information and add to chain and model and structure
-                    fragRes.name                      = resList[res][0]
-                    fragRes.seqid                     = gemmi.SeqId ( 1, ' ' )
-                    fragRes.entity_type               = gemmi.EntityType.Polymer
-                    fragChain.add_residue             ( fragRes )
-                    resModel.add_chain                ( fragChain )
+                resModel                              = solvate_structures.prepareMatchFile ( resList[res], fragFragments[frName], matchedFrags[res][frag][frName], settings )
                 
                 ### For each water atom
                 matchedWaters                         = []
@@ -154,8 +111,7 @@ def predictWaters ( resList, matchedFrags, fragFragments, settings ):
                     waterAtomPos                      = numpy.array ( [ fragFragments[frName]["waters"][wIt][1],
                                                                         fragFragments[frName]["waters"][wIt][2],
                                                                         fragFragments[frName]["waters"][wIt][3] ] )
-                    waterAtomPos                      = numpy.matmul ( waterAtomPos, matchedFrags[res][frag][frName]["rotation"] )
-                    waterAtomPos                      = waterAtomPos + matchedFrags[res][frag][frName]["translation"]
+                    waterAtomPos                      = solvate_maths.rotateAndTranslateAtom ( waterAtomPos, matchedFrags[res][frag][frName] )
                     
                     ### Save also the name, occupancy and B-factor
                     waterAtomPos                      = numpy.append ( waterAtomPos, numpy.array ( [ fragFragments[frName]["waters"][wIt][0],
@@ -168,41 +124,8 @@ def predictWaters ( resList, matchedFrags, fragFragments, settings ):
                     
                 
                 ### Add waters and fragment to structure and write it, if required
-                if matchStr is not None:
-                
-                    ### Create water chain and add it
-                    watChain                          = gemmi.Chain ( "W" )
-                    
-                    ### For each water atom
-                    resCtr                            = 1
-                    for at in matchedWaters:
-                    
-                        ### Set the atom info
-                        watAtom                       = gemmi.Atom ( )
-                        watAtom.name                  = str ( at[3] )
-                        watAtom.pos                   = gemmi.Position ( float ( at[0] ) , float ( at[1] ), float ( at[2] ) )
-                        watAtom.occ                   = float ( at[4] )
-                        watAtom.b_iso                 = float ( at[5] )
-                    
-                        ### Set the residue information and add to chain
-                        watRes                        = gemmi.Residue ( )
-                        watRes.add_atom               ( watAtom )
-                        watRes.name                   = "HOH"
-                        watRes.seqid                  = gemmi.SeqId ( resCtr, ' ' )
-                        watRes.entity_type            = gemmi.EntityType.Water
-                        watChain.add_residue          ( watRes )
-                        resCtr                        = resCtr + 1
-                        
-                    
-                    resModel.add_chain                ( watChain )
-                    matchStr.add_model                ( resModel )
-                    
-                    ### Write fragment-residue match
-                    matchName                         = str ( resCounter ) + "_" + str ( resList[res][0] ) + "-" + str ( frName.split( os.path.sep )[ len ( frName.split( os.path.sep ) ) - 1 ].split(".")[0] ) + ".pdb"
-                    matchStr.write_pdb                ( os.path.join ( settings.matchedFragsPath, matchName ) )
-                    
-                    ### Report progress
-                    solvate_log.writeLog                  ( "Written matched hydrated fragment to residue alignement file with water to " + str( frName ), settings, 4 )
+                matchName                             = str ( resCounter ) + "_" + str ( resList[res][0] ) + "-" + str ( frName.split( os.path.sep )[ len ( frName.split( os.path.sep ) ) - 1 ].split(".")[0] ) + ".pdb"
+                solvate_structures.completeAndWriteMatchFile ( resModel, matchedWaters, matchName, settings )
                     
                 
         ### Save the rotated and translated waters for this match
@@ -211,5 +134,211 @@ def predictWaters ( resList, matchedFrags, fragFragments, settings ):
         ### Prepare for next residue
         resCounter                                    = resCounter + 1
 
+    ### Log progress
+    solvate_log.writeLog                              ( "Water prediction complete", settings, 2 )
+
     ### Done
     return                                            ( predictedWaters )
+
+######################################################
+# removeClashes ()
+def removeClashes ( waters, settings ):
+    """
+    ...
+
+    Parameters
+    ----------
+    list : waters
+        List of all water molecules obtained from the assigned hydrated matched fragments for each
+        residue. These water molecules are rotated and translated to be in appropriate positions
+        to the residue position.
+        
+    solvate_globals.globalSettings : settings
+        Instance of the settings class contaning all the options and values.
+
+    Returns
+    -------
+    list : noClashWaters
+        List containing a list of water molecules which have no clashes (as defined by the settings)
+        to the various versions of the input structure. The versions are: full structure, no hydrogens,
+        no waters, no ligands. If some of the versions were not requested, the list for that version will
+        be empty.
+
+    """
+    ### Log progress
+    solvate_log.writeLog                              ( "Removing clashes between new waters and structure contents", settings, 1 )
+    
+    ### Initialise variables
+    noClashWaters                                     = []
+
+    ### Should full structure contents be used to detect clashes?
+    if not settings.noFullStructure:
+        
+        ### Get list of waters not clashing wiht the full structure
+        noClashWaters.append                          ( removeClashingWaters ( waters, settings.inputCoordinateStructure, "full structure", settings ) )
+    
+    else:
+    
+        ### Return empty list if full structure no clashes are not required
+        noClashWaters.append                          ( [] )
+        
+    ### Should hydrogens be removed for clashes detection?
+    if settings.noHydro:
+        
+        ### Produce structure with no hydrogens
+        settings.inputCoordinateStructureNoHydro      = gemmi.read_structure ( settings.inputCoordinateFile )
+        for model in settings.inputCoordinateStructureNoHydro:
+            for chain in model:
+                for res in chain:
+                    delAtInds                         = []
+                    for atIndex, at in enumerate ( res ):
+                        if at.is_hydrogen():
+                            delAtInds.append          ( atIndex )
+                    for atIt in sorted ( delAtInds, reverse = True ):
+                        del res[atIt]
+        
+        ### Get list of waters, ignoring clashes with hydrogens
+        noClashWaters.append                          ( removeClashingWaters ( waters, settings.inputCoordinateStructureNoHydro, "ignore hydrogens", settings ) )
+    
+    else:
+    
+        ### Return empty list if hydrogen clashes ignoring is not required
+        noClashWaters.append                          ( [] )
+        
+    ### Should already existing waters be removed for clashes detection?
+    if settings.noWaters:
+        
+        ### Produce structure with no waters
+        settings.inputCoordinateStructureNoWaters     = gemmi.read_structure ( settings.inputCoordinateFile )
+        for model in settings.inputCoordinateStructureNoWaters:
+            for chain in model:
+                delResInds                            = []
+                for resInd, res in enumerate ( chain ):
+                    if res.is_water():
+                        delResInds.append             ( resInd )
+                for rIt in sorted ( delResInds, reverse = True ):
+                    del chain[rIt]
+        
+        ### Get list of waters, ignoring clashes with hydrogens
+        noClashWaters.append                          ( removeClashingWaters ( waters, settings.inputCoordinateStructureNoWaters, "ignore existing waters", settings ) )
+    
+    else:
+    
+        ### Return empty list if hydrogen clashes ignoring is not required
+        noClashWaters.append                          ( [] )
+        
+    ### Should already existing waters be removed for clashes detection?
+    if settings.noLigand:
+        
+        ### Produce structure with no ligands
+        settings.inputCoordinateStructureNoLigand     = gemmi.read_structure ( settings.inputCoordinateFile )
+        for model in settings.inputCoordinateStructureNoLigand:
+            for chain in model:
+                delResInds                            = []
+                for resInd, res in enumerate ( chain ):
+                    if res in chain.get_ligands():
+                        delResInds.append             ( resInd )
+                for rIt in sorted ( delResInds, reverse = True ):
+                    del chain[rIt]
+
+        ### Get list of waters, ignoring clashes with hydrogens
+        noClashWaters.append                          ( removeClashingWaters ( waters, settings.inputCoordinateStructureNoLigand, "ignore ligands", settings ) )
+    
+    else:
+    
+        ### Return empty list if hydrogen clashes ignoring is not required
+        noClashWaters.append                          ( [] )
+        
+    ### Done
+    return                                            ( noClashWaters )
+
+######################################################
+# removeClashingWaters ()
+def removeClashingWaters ( waters, structure, structureState, settings ):
+    """
+    This function takes a structure, which may have different parts removed in order to make clash
+    detection not use such removed parts. It then searches each water from any matched hydrated fragment
+    for having a neighbouring atom within the threshold radius and only water molecules with no neighbour in
+    such threshold radius are kept.
+    
+    It then proceeds to return a list containing a list of all passing water molecules for each residue.
+
+    Parameters
+    ----------
+    list : waters
+        List of all water molecules obtained from the assigned hydrated matched fragments for each
+        residue. These water molecules are rotated and translated to be in appropriate positions
+        to the residue position.
+        
+    gemmi.Structure : structure
+        The structure all of which contents will be used to check for clashes.
+        
+    str : structureState
+        String describing the type of contents that were removed from the structure for
+        purposes of clashes detection.
+        
+    solvate_globals.globalSettings : settings
+        Instance of the settings class contaning all the options and values.
+
+    Returns
+    -------
+    list : noClashWaters
+        List of lists, where each residue has its own list of atoms passing the clash detection.
+
+    """
+    ### Log progress
+    solvate_log.writeLog                              ( "Removing clashes between new waters and structure " + str( structureState ), settings, 2 )
+    
+    ### Initialise variables
+    neighSearches                                     = []
+    noClashWaters                                     = []
+    
+    ### For each model
+    for model in structure:
+    
+        ### Prepare the model for the cell-lists neighbour-search
+        neighSearches.append                          ( gemmi.NeighborSearch ( model, structure.cell, settings.clashWithinRadius ).populate() )
+        
+    ### For each residue
+    resCtr                                            = 0
+    for res in waters:
+    
+        ### Update variables
+        resCtr                                        = resCtr + 1
+        resNCWaters                                   = []
+        
+        ### Log progress
+        solvate_log.writeLog                          ( "Working on residue " + str ( resCtr ), settings, 3 )
+    
+        ### For each water molecule
+        for watM in res:
+        
+            ### Initialise variables
+            noNeighbours                              = True
+        
+            ### For each model
+            for neighSearch in neighSearches:
+        
+                ### Search for neighbours
+                neighbours                            = neighSearch.find_atoms ( gemmi.Position ( float ( watM[0] ),
+                                                                                                  float ( watM[1] ),
+                                                                                                  float ( watM[2] ) ),
+                                                                                 '\0',
+                                                                                 settings.clashWithinRadius )
+            
+                ### Check for number of neighbours
+                if len ( neighbours ) > 0:
+                    noNeighbours                      = False
+                
+            ### If no model has any neighbours
+            if noNeighbours:
+                resNCWaters.append                    ( watM )
+            
+        ### Add all waters for this residue to return list
+        noClashWaters.append                          ( resNCWaters )
+        
+        ### Log progress
+        solvate_log.writeLog                          ( "Found " + str ( len ( resNCWaters ) ) + " water molecules with no neighbours.", settings, 4 )
+        
+    ### Done
+    return                                            ( noClashWaters )

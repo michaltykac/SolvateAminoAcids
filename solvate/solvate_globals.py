@@ -70,6 +70,9 @@ class globalSettings:
         ### Set input structure
         self.inputCoordinateFile                      = ""
         self.inputCoordinateStructure                 = None
+        self.inputCoordinateStructureNoHydro          = None
+        self.inputCoordinateStructureNoWaters         = None
+        self.inputCoordinateStructureNoLigand         = None
         
         ### Set the hydrated data paths
         self.resInputDir                              = "resData"
@@ -84,6 +87,13 @@ class globalSettings:
         ### Set the fragment matching options
         self.useBackboneAtoms                         = False
         self.bestFragmentOnly                         = False
+        
+        ### Set the water clashing options
+        self.clashWithinRadius                        = 2.0
+        self.noFullStructure                          = False
+        self.noHydro                                  = False
+        self.noWaters                                 = False
+        self.noLigand                                 = False
         
         ### Set the fragment matching threshold
         self.RMSDthreshold                            = 0.5
@@ -266,7 +276,96 @@ class globalSettings:
         ### If not empty, create unless exists
         if ( self.matchedFragsPath != "" ) and ( not os.path.isdir ( self.matchedFragsPath ) ):
             os.makedirs                               ( self.matchedFragsPath )
+            
+    def setClashRadius ( self, clRad ):
+        """
+        This mutator function sets the radius withing which no atom can be for no clash to be
+        detected.
+
+        Parameters
+        ----------
+        str : clRad
+            The radius which must be atom free if there is to be no clash.
+
+        Returns
+        -------
+        NONE
+
+        """
+        ### Set
+        self.clashWithinRadius                        = clRad
         
+    def setNoFullStructure ( self, nfStr ):
+        """
+        This mutator function sets the switch deciding whether the full structure contents should
+        be used to detect new water molecule clashes.
+
+        Parameters
+        ----------
+        boolean : nfStr
+            The new value for this switch variable.
+
+        Returns
+        -------
+        NONE
+
+        """
+        ### Set
+        self.noFullStructure                          = nfStr
+        
+    def setNoHydro ( self, nHyd ):
+        """
+        This mutator function sets the switch deciding whether the hydrogen atoms should
+        be used to detect new water molecule clashes.
+
+        Parameters
+        ----------
+        boolean : nHyd
+            The new value for this switch variable.
+
+        Returns
+        -------
+        NONE
+
+        """
+        ### Set
+        self.noHydro                                  = nHyd
+        
+    def setNoWaters ( self, nWat ):
+        """
+        This mutator function sets the switch deciding whether the already present water
+        molecules should be used to detect new water molecule clashes.
+
+        Parameters
+        ----------
+        boolean : nWat
+            The new value for this switch variable.
+
+        Returns
+        -------
+        NONE
+
+        """
+        ### Set
+        self.noWaters                                 = nWat
+        
+    def setNoLigand ( self, nLig ):
+        """
+        This mutator function sets the switch deciding whether the ligand
+        molecules should be used to detect new water molecule clashes.
+
+        Parameters
+        ----------
+        boolean : nLig
+            The new value for this switch variable.
+
+        Returns
+        -------
+        NONE
+
+        """
+        ### Set
+        self.noLigand                                 = nLig
 
     def parseCommandLineArguments ( self ):
         """
@@ -306,9 +405,16 @@ class globalSettings:
             
         if clArgs.matchedFrags is not None:
             self.setMatchedFragsPath                  ( str ( clArgs.matchedFrags[0] ) )
+            
+        if clArgs.clRad is not None:
+            self.setClashRadius                       ( float ( clArgs.clRad[0] ) )
 
         self.setBestFragOnly                          ( clArgs.bestOnly )
         self.setUseBackbone                           ( clArgs.b )
+        self.setNoFullStructure                       ( clArgs.noFullStr )
+        self.setNoHydro                               ( clArgs.noHydro )
+        self.setNoWaters                              ( clArgs.noWaters )
+        self.setNoLigand                              ( clArgs.noLigand )
 
     def getVersion ( self ):
         """

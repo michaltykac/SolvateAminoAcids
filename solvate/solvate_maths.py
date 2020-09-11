@@ -458,3 +458,40 @@ def findPassingDistances ( distances, threshold ):
     
     ### Return the index
     return                                            ( minInd )
+
+######################################################
+# findPassingDistances ()
+def rotateAndTranslateAtom ( atom, transform ):
+    """
+    This function takes a numpy.array of atom positions (X, Y, Z) and proceeds to
+    apply the transform rotation and then transform translation to this position.
+    It then returns the new position.
+    
+    Warning: Note that rotation is done before translation, if this is not the
+    correct order of transformations, then please do not use the function!
+
+    Parameters
+    ----------
+    numpy.array : atom
+        Array with three numbers signifying the current atom position.
+        
+    dictionary : transform
+        Dictionary containing the "rotation" key with the optimal rotation matrix and
+        a "translation" key with the optimal translation. It should be the result of
+        the procrustes analysis.
+
+    Returns
+    -------
+    numpy.array : res
+        Array containing the new position resulting from rotating and translation the
+        input position.
+
+    """
+    ### Apply rotation
+    atomPos                                           = numpy.matmul ( atom, transform["rotation"] )
+    
+    ### Apply translation
+    atomPos                                           = atomPos + transform["translation"]
+    
+    ### Return the index
+    return                                            ( atomPos )
