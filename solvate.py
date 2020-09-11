@@ -51,8 +51,11 @@ if settings.useBackboneAtoms:
 matchedFrags                                          = solvate.matchFragments ( resList, fragFragments, resFragments,  settings )
 
 ######################################################
-# Predict waters for co-ordinates
+# Predict all waters for co-ordinates
 waters                                                = solvate.predictWaters ( resList, matchedFrags, fragFragments, settings )
+
+######################################################
+# Remove clashing waters
 
 ######################################################
 # Terminate

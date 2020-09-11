@@ -58,13 +58,19 @@ def predictWaters ( resList, matchedFrags, fragFragments, settings ):
     """
     ### Log progress
     solvate_log.writeLog                              ( "Starting water prediction", settings, 1 )
+    
+    ### Initialise variables
+    predictedWaters                                   = []
 
     ### For each residue
     resCounter                                        = 1
     for res in range ( 0, len ( resList ) ):
     
         ### Report progress
-        solvate_log.writeLog                          ( "Starting water prediction for residue " + str( resList[res][0] ), settings, 2 )
+        solvate_log.writeLog                          ( "Starting water prediction for residue " + str( resCounter ) + " (" + str( resList[res][0] ) + ")", settings, 2 )
+        
+        ### Initialise variables
+        predictedWatersForRes                         = []
         
         ### For each matched fragment
         for frag in range ( 0, len ( matchedFrags[res] ) ):
@@ -150,10 +156,16 @@ def predictWaters ( resList, matchedFrags, fragFragments, settings ):
                                                                         fragFragments[frName]["waters"][wIt][3] ] )
                     waterAtomPos                      = numpy.matmul ( waterAtomPos, matchedFrags[res][frag][frName]["rotation"] )
                     waterAtomPos                      = waterAtomPos + matchedFrags[res][frag][frName]["translation"]
+                    
+                    ### Save also the name, occupancy and B-factor
                     waterAtomPos                      = numpy.append ( waterAtomPos, numpy.array ( [ fragFragments[frName]["waters"][wIt][0],
                                                                                                      fragFragments[frName]["waters"][wIt][4],
                                                                                                      fragFragments[frName]["waters"][wIt][5] ] ) )
+
+                    ### Save the predicted water atom
+                    predictedWatersForRes.append      ( waterAtomPos )
                     matchedWaters.append              ( waterAtomPos )
+                    
                 
                 ### Add waters and fragment to structure and write it, if required
                 if matchStr is not None:
@@ -192,7 +204,12 @@ def predictWaters ( resList, matchedFrags, fragFragments, settings ):
                     ### Report progress
                     solvate_log.writeLog                  ( "Written matched hydrated fragment to residue alignement file with water to " + str( frName ), settings, 4 )
                     
-                ### Save the rotated and translated waters for this match
                 
+        ### Save the rotated and translated waters for this match
+        predictedWaters.append                        ( predictedWatersForRes )
+        
+        ### Prepare for next residue
         resCounter                                    = resCounter + 1
 
+    ### Done
+    return                                            ( predictedWaters )

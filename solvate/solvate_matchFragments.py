@@ -455,16 +455,16 @@ def matchFragmentsUsingBackbone ( res, resFragments, fragFragments, settings ):
                 continue
                 
             # Ignore fragments with wrong secondary structure
-            if fl.split( os.path.sep )[ len ( fl.split( os.path.sep ) ) - 1 ].split("_")[1] != str( rot.keys() ).split( "_" )[1]:
+            if fl.split( os.path.sep )[ len ( fl.split( os.path.sep ) ) - 1 ].split("_")[1] != str( list ( rot )[0] ).split( "_" )[1]:
                 continue
                 
             # Ignore fragments with wrong rotamer
-            if fl.split( os.path.sep )[ len ( fl.split( os.path.sep ) ) - 1 ].split("_")[2] != str( rot.keys() ).split( "_" )[0]:
+            if fl.split( os.path.sep )[ len ( fl.split( os.path.sep ) ) - 1 ].split("_")[2] != str( list ( rot )[0] ).split( "_" )[0]:
                 continue
 
             # Passed! Now write up and save
-            solvate_log.writeLog                      ( "Matched residue to fragment " + str ( fl ) + ".", 3 )
-            fragList.append                           ( { fl : rot[1] } )
+            solvate_log.writeLog                      ( "Matched residue to fragment " + str ( fl ) + ".", settings, 3 )
+            fragList.append                           ( { fl : rot[list( rot )[0]] } )
             
     ### Save to output
     return                                            ( fragList )
