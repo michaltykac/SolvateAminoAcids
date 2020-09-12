@@ -114,6 +114,12 @@ def getCLArgs ( version ):
                           type                        = float,
                           nargs                       = 1,
                           help                        = 'The radius which must not have any atoms if there is to be no clash. The default value is 2.0.')
+                          
+    ### Maximum distance of waters within same cluster
+    parser.add_argument ( '--maxClDist',
+                          type                        = float,
+                          nargs                       = 1,
+                          help                        = 'The maximum distance between two water molecules to be still considered for the same cluster. The default value is 1.8.')
    
     ### Change the log file name
     parser.add_argument ( '--log',

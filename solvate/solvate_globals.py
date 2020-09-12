@@ -88,6 +88,9 @@ class globalSettings:
         self.useBackboneAtoms                         = False
         self.bestFragmentOnly                         = False
         
+        ### Set the fragment matching threshold
+        self.RMSDthreshold                            = 0.5
+        
         ### Set the water clashing options
         self.clashWithinRadius                        = 2.0
         self.noFullStructure                          = False
@@ -95,8 +98,8 @@ class globalSettings:
         self.noWaters                                 = False
         self.noLigand                                 = False
         
-        ### Set the fragment matching threshold
-        self.RMSDthreshold                            = 0.5
+        ### Set the clustering threshold
+        self.maxClustDist                             = 1.8
 
     def setLogPath ( self, logLoc ):
         """
@@ -366,6 +369,24 @@ class globalSettings:
         """
         ### Set
         self.noLigand                                 = nLig
+        
+    def setMaxClusterDist ( self, mcd ):
+        """
+        This mutator function sets the maximum distance that two water molecules can have
+        for them to be considered for being in the same water cluster.
+
+        Parameters
+        ----------
+        float : mcd
+            The maximum distance between two waters in the same water cluster.
+
+        Returns
+        -------
+        NONE
+
+        """
+        ### Set
+        self.maxClustDist                             = mcd
 
     def parseCommandLineArguments ( self ):
         """
@@ -408,6 +429,9 @@ class globalSettings:
             
         if clArgs.clRad is not None:
             self.setClashRadius                       ( float ( clArgs.clRad[0] ) )
+            
+        if clArgs.maxClDist is not None:
+            self.setMaxClusterDist                    ( float ( clArgs.maxClDist[0] ) )
 
         self.setBestFragOnly                          ( clArgs.bestOnly )
         self.setUseBackbone                           ( clArgs.b )

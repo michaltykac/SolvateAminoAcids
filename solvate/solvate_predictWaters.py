@@ -2,7 +2,18 @@
 #   \file solvate_predictWaters.py
 #   \brief This file provides water molecules predicting algorithms.
 #
-#   ...
+#   This file contains function for achieving several modifications. There are functions for
+#   obtaining all waters from the hydrated fragments matched to individual input resudues, including
+#   the correct rotation and translation of these to to input residue space.
+#
+#   Moreover, there are functions allowing detection of clashes between water molecules predicted as
+#   described above and various "versions" of the input structure. These "versions" include the original
+#   input structure, the structure with no hydrogens, with no already determined water molecules or with
+#   no ligands.
+#
+#   Finally, there are also functions required to take the resulting water molecules list with no clashes
+#   and clustering these in order to remove (or rather combine) very similar water molecules into a single
+#   most likely water molecule position.
 #
 #   Copyright by the Authors and individual contributors. All rights reserved.
 #
@@ -28,7 +39,8 @@ import solvate.solvate_log as solvate_log             ### Writing log
 import solvate.solvate_maths as solvate_maths         ### Computing distances and rotations
 import solvate.solvate_structures as solvate_structures ### Fragment match file creation
 import gemmi                                          ### File reading and writing
-import os
+import os                                             ### Path separator
+from sklearn.cluster import DBSCAN                    ### DBSCAN alorithm
 
 ######################################################
 # predictWaters ()
@@ -144,7 +156,10 @@ def predictWaters ( resList, matchedFrags, fragFragments, settings ):
 # removeClashes ()
 def removeClashes ( waters, settings ):
     """
-    ...
+    This function takes the list of all predicted water molecules and attempts to detect any clashes
+    between any such molecule and the original input structure, or any "version" of it. Here, by "version"
+    we mean the input structure with no hydorgens, no already detected waters or no ligands. It then returns
+    a list of water molecules with no clashes for each of the required "version".
 
     Parameters
     ----------
@@ -163,6 +178,10 @@ def removeClashes ( waters, settings ):
         to the various versions of the input structure. The versions are: full structure, no hydrogens,
         no waters, no ligands. If some of the versions were not requested, the list for that version will
         be empty.
+        
+    list : waterLabels
+        List of labels describing each of the noClashWaters list entries (i.e. what was used and not used
+        for clash detection)
 
     """
     ### Log progress
@@ -249,8 +268,12 @@ def removeClashes ( waters, settings ):
         ### Return empty list if hydrogen clashes ignoring is not required
         noClashWaters.append                          ( [] )
         
+    ### Log progress
+    solvate_log.writeLog                              ( "Clashes removed for all requested structures", settings, 2 )
+        
     ### Done
-    return                                            ( noClashWaters )
+    waterLabels                                       = [ "full structure", "ignore hydrogens", "ignore existing waters", "ignore ligands" ]
+    return                                            ( noClashWaters, waterLabels )
 
 ######################################################
 # removeClashingWaters ()
@@ -342,3 +365,92 @@ def removeClashingWaters ( waters, structure, structureState, settings ):
         
     ### Done
     return                                            ( noClashWaters )
+
+######################################################
+# clusterWaters ()
+def clusterWaters ( noClashWaters, waterLabels, settings ):
+    """
+    This function takes the list of predicted water molecules which do not clash with any protein atoms
+    and it proceeds to cluster these using the DBSCAN algorithm. It then returns the labels for each
+    water molecule as well as the total number of clusters for each member of the input list.
+
+    Parameters
+    ----------
+    list : noClashWaters
+        List containing a list of water molecules which have no clashes (as defined by the settings)
+        to the various versions of the input structure. The versions are: full structure, no hydrogens,
+        no waters, no ligands. If some of the versions were not requested, the list for that version will
+        be empty.
+        
+    list : waterLabels
+        List of labels describing each of the noClashWaters list entries (i.e. what was used and not used
+        for clash detection)
+        
+    solvate_globals.globalSettings : settings
+        Instance of the settings class contaning all the options and values.
+
+    Returns
+    -------
+    list : clusteredWaters
+        A list of cluster labels and cluster count for each structure type available in the noClashWaters
+        input variable.
+
+    """
+    ### Log progress
+    solvate_log.writeLog                              ( "Clustering predicted non-clashing water molecules", settings, 1 )
+    
+    ### Initialise variables
+    clusteredWaters                                   = []
+    
+    ### For each structure
+    stIt                                              = 0
+    for strType in noClashWaters:
+        
+        ### Do nothing if not required
+        if len ( strType ) == 0:
+            continue
+        
+        ### Log progress
+        solvate_log.writeLog                          ( "Started clustering predicted non-clashing water molecules for waters from " + str( waterLabels[stIt] ), settings, 2 )
+        
+        ### Find how many waters we have
+        noWaters                                      = 0
+        for res in strType:
+            for at in res:
+                noWaters                              = noWaters + 1
+        
+        ### Create numpy array
+        watPositions                                  = numpy.zeros ( ( noWaters, 3 ), dtype=float)
+        
+        ### For each water position
+        noWaters                                      = 0
+        for res in strType:
+            for at in res:
+            
+                ### Save to new array
+                watPositions[noWaters][0]             = at[0]
+                watPositions[noWaters][1]             = at[1]
+                watPositions[noWaters][2]             = at[2]
+                
+                ### Prepare for next iteration
+                noWaters                              = noWaters + 1
+        
+        ### Cluster using DBSCAN
+        clusterObj                                    = DBSCAN ( eps = settings.maxClustDist, min_samples = 1 ).fit ( watPositions )
+        
+        ### Get clusters
+        labels                                        = clusterObj.labels_
+        nClusters                                     = len ( set ( labels ) ) - ( 1 if -1 in labels else 0 )
+        
+        ### Log progress
+        solvate_log.writeLog                          ( "Found " + str ( noWaters ) + " waters for structure type " + str( waterLabels[stIt] ) + ", which clustered to " + str ( nClusters ) + " clusters.", settings, 3 )
+        stIt                                          = stIt + 1
+        
+        ### Save results
+        clusteredWaters.append                        ( [ labels, nClusters ] )
+    
+    ### Log progress
+    solvate_log.writeLog                              ( "Completed water molecules clustering", settings, 1 )
+    
+    ### Done
+    return                                            ( clusteredWaters )

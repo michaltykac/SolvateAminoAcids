@@ -56,10 +56,11 @@ waters                                                = solvate.predictWaters ( 
 
 ######################################################
 # Remove clashing waters
-watersNoClash                                         = solvate.removeClashes ( waters, settings )
+( watersNoClash, waterLabels )                        = solvate.removeClashes ( waters, settings )
 
 ######################################################
 # Cluster waters
+waterClusters                                         = solvate.clusterWaters ( watersNoClash, waterLabels, settings )
 
 ######################################################
 # Terminate

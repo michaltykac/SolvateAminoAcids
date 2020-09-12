@@ -29,3 +29,4 @@ from solvate.solvate_structures import getAllResidueFragments
 from solvate.solvate_matchFragments import matchFragments
 from solvate.solvate_predictWaters import predictWaters
 from solvate.solvate_predictWaters import removeClashes
+from solvate.solvate_predictWaters import clusterWaters
