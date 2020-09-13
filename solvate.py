@@ -63,5 +63,13 @@ waters                                                = solvate.predictWaters ( 
 waterClusters                                         = solvate.clusterWaters ( watersNoClash, waterLabels, settings )
 
 ######################################################
+# Combine clusters and add waters
+solvate.combineAndAddWaters                           ( waterClusters, waterLabels, settings )
+
+######################################################
+# Write out hydrated co-ordinates
+solvate.writeOutStructures                            ( waterLabels, settings )
+
+######################################################
 # Terminate
 solvate.endLog                                        ( settings )

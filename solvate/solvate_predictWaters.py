@@ -392,8 +392,8 @@ def clusterWaters ( noClashWaters, waterLabels, settings ):
     Returns
     -------
     list : clusteredWaters
-        A list of cluster labels and cluster count for each structure type available in the noClashWaters
-        input variable.
+        A list of cluster labels, cluster count, water positions and molecule occupancies and B factors for
+        each structure type available in the noClashWaters input variable.
 
     """
     ### Log progress
@@ -421,6 +421,8 @@ def clusterWaters ( noClashWaters, waterLabels, settings ):
         
         ### Create numpy array
         watPositions                                  = numpy.zeros ( ( noWaters, 3 ), dtype=float)
+        watOccs                                       = numpy.zeros ( ( noWaters, 1 ), dtype=float )
+        watBFacts                                     = numpy.zeros ( ( noWaters, 1 ), dtype=float )
         
         ### For each water position
         noWaters                                      = 0
@@ -431,6 +433,10 @@ def clusterWaters ( noClashWaters, waterLabels, settings ):
                 watPositions[noWaters][0]             = at[0]
                 watPositions[noWaters][1]             = at[1]
                 watPositions[noWaters][2]             = at[2]
+                
+                ### Save occupancies and B factors as well
+                watOccs[noWaters]                     = at[4]
+                watBFacts[noWaters]                   = at[5]
                 
                 ### Prepare for next iteration
                 noWaters                              = noWaters + 1
@@ -447,10 +453,10 @@ def clusterWaters ( noClashWaters, waterLabels, settings ):
         stIt                                          = stIt + 1
         
         ### Save results
-        clusteredWaters.append                        ( [ labels, nClusters ] )
+        clusteredWaters.append                        ( [ labels, nClusters, watPositions, watOccs, watBFacts ] )
     
     ### Log progress
-    solvate_log.writeLog                              ( "Completed water molecules clustering", settings, 1 )
+    solvate_log.writeLog                              ( "Completed water molecules clustering", settings, 2 )
     
     ### Done
     return                                            ( clusteredWaters )

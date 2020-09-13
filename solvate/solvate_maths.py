@@ -495,3 +495,61 @@ def rotateAndTranslateAtom ( atom, transform ):
     
     ### Return the index
     return                                            ( atomPos )
+
+######################################################
+# getWaterClusterCOM ()
+def getWaterClusterCOM ( clusterIndex, clusteredWaters ):
+    """
+    This function takes the index of a cluster, the list of all water molecules and  the
+    appropriate labels list and proceeds to compute the occupancy weighted COM position
+    for the cluster, which it then returns.
+
+    Parameters
+    ----------
+    int : clusterIndex
+        The index of the cluster for which the computation is to be made.
+        
+    list : clusteredWaters
+        A list of cluster labels, cluster count, water positions and molecule occupancies and B factors for
+        each structure type available in the noClashWaters input variable.
+        
+    list : watersNoClash
+        List containing a list of water molecules which have no clashes (as defined by the settings)
+        to the various versions of the input structure. The versions are: full structure, no hydrogens,
+        no waters, no ligands. If some of the versions were not requested, the list for that version will
+        be empty.
+
+    Returns
+    -------
+    list : COM
+        This list contains the COM position weighted by the occupancy of the contributing water molecules and the
+        average occupancy and B factor as well.
+
+    """
+    ### Find all member indices
+    members                                           = numpy.where ( clusteredWaters[0] == clusterIndex )[0]
+    
+    ### Initialise variables
+    COM                                               = numpy.zeros ( 5 )
+    occSum                                            = 0.0
+    bFacSum                                           = 0.0
+    
+    ### For each member, find sum of positions weighted by occupancy
+    for mem in members:
+
+        ### Get occupancy weighted COM and occupancy sum
+        COM[0]                                       += ( clusteredWaters[2][mem][0] * clusteredWaters[3][mem] )
+        COM[1]                                       += ( clusteredWaters[2][mem][1] * clusteredWaters[3][mem] )
+        COM[2]                                       += ( clusteredWaters[2][mem][2] * clusteredWaters[3][mem] )
+        occSum                                       += clusteredWaters[3][mem]
+        bFacSum                                      += clusteredWaters[4][mem]
+        
+    ### Average by occupancy sum
+    COM[0]                                           /= occSum
+    COM[1]                                           /= occSum
+    COM[2]                                           /= occSum
+    COM[3]                                            = occSum / float ( len ( members ) )
+    COM[4]                                            = bFacSum / float ( len ( members ) )
+ 
+    ### Done
+    return ( COM )

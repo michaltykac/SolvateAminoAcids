@@ -26,6 +26,7 @@ import os                                             ### Checking for file exis
 import glob                                           ### Listing all files in folder
 import gemmi                                          ### Library of choice for structure reading/writing
 import numpy                                          ### Get numpy.array's
+import string                                         ### For letters list
 
 import solvate.solvate_log as solvate_log             ### For writing the log
 import solvate.solvate_maths as solvate_maths         ### Atom rotation and translation
@@ -460,7 +461,6 @@ def completeAndWriteMatchFile ( resModel, matchedWaters, matchFileName, settings
 
     """
     ### If required
-
     if resModel is not None:
     
         ### Create water chain and add it
@@ -499,5 +499,226 @@ def completeAndWriteMatchFile ( resModel, matchedWaters, matchFileName, settings
         ### Report progress
         solvate_log.writeLog                          ( "Written matched hydrated fragment to residue alignement file with water to " + str( matchFileName ), settings, 4 )
         
-        ### Done
-        return
+    ### Done
+    return
+
+######################################################
+# combineAndAddWaters ()
+def combineAndAddWaters ( waterClusters, waterLabels, settings ):
+    """
+    This function firstly computes the centres of mass for each detected water molecule cluster, weighting
+    the positions by the occupancy. It then proceeds to add a single water molecule to the appropriate
+    structure to the structure "version" for each water cluster, using the cluster members average occupancy
+    and average B-factor for this newly added water residue. Thus, it modifies the structures saved in the
+    settings class.
+
+    Parameters
+    ----------
+    list : clusteredWaters
+        A list of cluster labels, cluster count, water positions and molecule occupancies and B factors for
+        each structure type available in the noClashWaters input variable.
+        
+    list : waterLabels
+        List of labels describing each of the noClashWaters list entries (i.e. what was used and not used
+        for clash detection)
+        
+    solvate_globals.globalSettings : settings
+        Instance of the settings class contaning all the options and values.
+
+    Returns
+    -------
+    NONE
+
+    """
+    ### Report progress
+    solvate_log.writeLog                              ( "Started combining and adding waters.", settings, 1 )
+
+    ### For each structure type
+    typeCounter                                       = 0
+    for watCl in range ( 0, len ( waterClusters ) ):
+    
+        ### Report progress
+        solvate_log.writeLog                          ( "Started combining and adding waters to structure " + str ( waterLabels[typeCounter] ), settings, 2 )
+    
+        ### Initiliase variables
+        COMS                                          = []
+    
+        ### For each cluster
+        for clusterIndex in range ( 0, waterClusters[watCl][1] ):
+        
+            ### Find the occupancy weighted COM for the cluster
+            COMS.append                               ( solvate_maths.getWaterClusterCOM ( clusterIndex, waterClusters[watCl] ) )
+        
+        ### Report progress
+        solvate_log.writeLog                          ( "COMs computed for clusters in structure " + str ( waterLabels[typeCounter] ), settings, 3 )
+        
+        ### Add the molecule to the appropriate structure
+        if typeCounter == 0:
+            
+            ### Add water clusters to full structure
+            addClustersToStructures                   ( settings.inputCoordinateStructure, COMS, settings )
+            
+        ### Add the molecule to the appropriate structure
+        if typeCounter == 1:
+            
+            ### Add water clusters to full structure
+            addClustersToStructures                   ( settings.inputCoordinateStructureNoHydro, COMS, settings )
+            
+        ### Add the molecule to the appropriate structure
+        if typeCounter == 2:
+            
+            ### Add water clusters to full structure
+            addClustersToStructures                   ( settings.inputCoordinateStructureNoWaters, COMS, settings )
+            
+        ### Add the molecule to the appropriate structure
+        if typeCounter == 3:
+            
+            ### Add water clusters to full structure
+            addClustersToStructures                   ( settings.inputCoordinateStructureNoLigand, COMS, settings )
+                
+        ### Report progress
+        solvate_log.writeLog                          ( "Water molecules added to structure " + str ( waterLabels[typeCounter] ), settings, 3 )
+                
+        ### Prepare for next iteration
+        typeCounter                                   = typeCounter + 1
+            
+
+    ### Report progress
+    solvate_log.writeLog                              ( "Combining and adding waters complete.", settings, 2 )
+
+    ### Done
+    return                                            ( )
+
+######################################################
+# addClustersToStructures ()
+def addClustersToStructures ( structure, COMS, settings ):
+    """
+    This function takes a gemmi structure and a list of all cluster COMs. It then proceeds to
+    find an empty (available) chain letter for the structure and adds water atoms to the positions
+    defined in the COMs list to this chain and into the structure.
+    
+    Should not chain letter be available, the function will add the waters to the chain name "A".
+
+    Parameters
+    ----------
+    gemmi.Structure: structure
+        This is the gemmi class representing an already prepared structure with possibly removed
+        components (created for clashing), to which the water clusters are to be added.
+    
+    list : COMS
+        This is a list of all water clusters positions and average occupancies.
+        
+    solvate_globals.globalSettings : settings
+        Instance of the settings class contaning all the options and values.
+
+    Returns
+    -------
+    NONE
+
+    """
+    ### Create a new chain for waters
+    curChains                                         = []
+    for model in structure:
+        for chain in model:
+            curChains.append                          ( chain.name )
+        
+    ### Initialise variables
+    waterChain                                        = None
+        
+    ### Try to add chain 'W' for waters
+    if 'W' not in curChains:
+        waterChain                                    = gemmi.Chain ( "W" )
+    
+    ### If not, then try to find any name
+    else:
+        for let in string.ascii_uppercase:
+            if let not in curChains:
+                waterChain                            = gemmi.Chain ( let )
+                break
+        
+    ### If no available chain name found, add to "A" and print warning
+    if waterChain is None:
+        solvate_log.writeLog                          ( "!!! WARNING !!! Cound not find and available chain name to create chain containing all predicted waters. Adding all predicted waters to chain \'A\'.", settings, 0 )
+        waterChain                                    = structure[0]['A']
+    
+    ### For each water cluster
+    resCounter                                        = 1
+    for com in COMS:
+        
+        ### Create the residue
+        watAtom                                       = gemmi.Atom ( )
+        watAtom.name                                  = str ( "O" )
+        watAtom.pos                                   = gemmi.Position ( com[0] , com[1], com[2] )
+        watAtom.occ                                   = float ( com[3] )
+        watAtom.b_iso                                 = float ( com[4] )
+        watAtom.charge                                = 0
+        watAtom.element                               = gemmi.Element ( "O" )
+        
+        ### Set the residue information and add to chain
+        watRes                                        = gemmi.Residue ( )
+        watRes.add_atom                               ( watAtom )
+        watRes.name                                   = "HOH"
+        watRes.seqid                                  = gemmi.SeqId ( resCounter, ' ' )
+        watRes.entity_type                            = gemmi.EntityType.Water
+        waterChain.add_residue                        ( watRes )
+        resCounter                                    = resCounter + 1
+            
+    ### Complete the chain and add to model and to structure
+    structure[0].add_chain                            ( waterChain )
+    
+    ### Done
+    return                                            ( )
+
+######################################################
+# writeOutStructures ()
+def writeOutStructures ( waterLabels, settings ):
+    """
+    This function simply writes the internal structures with their modifications to files. 
+
+    Parameters
+    ----------
+    list : waterLabels
+        List of labels describing each of the noClashWaters list entries (i.e. what was used and not used
+        for clash detection)
+    
+    solvate_globals.globalSettings : settings
+        Instance of the settings class contaning all the options and values.
+
+    Returns
+    -------
+    NONE
+
+    """
+    ### Report progress
+    solvate_log.writeLog                              ( "Writing out the modified co-ordinate files", settings, 1 )
+    
+    ### For each processed structure
+    for wLab in range ( 0, len ( waterLabels ) ):
+        
+        ### Check if required
+        if ( wLab == 0 ):
+            if settings.noFullStructure:
+                continue
+            else:
+                settings.inputCoordinateStructure.write_pdb ( "solvate_fullStructure_waters.pdb" )
+            
+        if wLab == 1:
+            if not settings.noHydro:
+                continue
+            else:
+                settings.inputCoordinateStructureNoHydro.write_pdb ( "solvate_noHydrogens_waters.pdb" )
+            
+        if wLab == 2:
+            if not settings.noWaters:
+                continue
+            else:
+                settings.inputCoordinateStructureNoWaters.write_pdb ( "solvate_noOriginalWaters_waters.pdb" )
+            
+        if wLab == 3:
+            if not settings.noLigand:
+                continue
+            else:
+                settings.inputCoordinateStructureNoLigand.write_pdb ( "solvate_noLigands_waters.pdb" )
+            
+    ### Done
+    return                                            ( )
