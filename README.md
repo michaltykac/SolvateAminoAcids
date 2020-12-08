@@ -61,7 +61,7 @@ The result of this command will be a default run of SolvateAminoAcids script, wh
     
 And which will create the *solvate_log.txt* file containing the log for the run and also the *solvate_fullStructure_waters.pdb* file, which is a macromolecular co-ordinate file with identical protein structure to the input file (*1lfa.pdb*), but containing the predicted water molecules. The following picture shows the original structure on the left and the new structure with predicted waters on the right.
 
-![](https://github.com/michaltykac/proshade/blob/experimental/Logo_small.png)
+![](https://github.com/michaltykac/SolvateAminoAcids/blob/solvate_amino_acids/fig1_1lfa.png)
 
 ### More options
 
