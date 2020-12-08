@@ -65,7 +65,21 @@ And which will create the *solvate_log.txt* file containing the log for the run 
 
 ### More options
 
-While the 
+While the default run shown above is capable of providing predictions as described in the paper, the SolvateAminoAcids module has more features. Firstly, there are several thresholds that SolvateAminoAcids uses to make decisions; while care has been taken to select a reasonable default values, the user is invited to change these to their liking. These thresholds are as follows:
+
+- ```r``` Fragment RMSD threshold - only hydrated fragments with RMSD threshold below this value will be considered similar enough.
+- ```clRad``` The clash radius - there must be no other atom within this radius for the water molecule to be added.
+- ```maxClDist``` Maximum cluster distance - when water molecules are clustered, only water molecules closer than this distance will be clustered together.
+
+Moreover, SolvateAminoAcids also has two distinct ways of selecting which fragment should be considered to hydrate each residue. The default way is to try all fragments available for the processed residue and select all fragments with RMSD value to the residue under the threshold ```r```. Should the user require only the best fragment to be used, this can be arranged using the command line option ```bestOnly```, while if the user requires SolvateAminoAcids to first determine the backbone secondary-structure and side-chain rotamers and then testing only hydrated fragments conforming to these constraints, this can be achieved by supplying the command line option ```b```.
+
+Finally, SolvateAminoAcids will be default use the structure as supplied, including ligands, already present waters and hydrogens. Should the user require the structure to be modified in any of the following ways, it can be requested using the appropriate command line optino. Please note that multiple structure modifications do not combine, but rather each either allows or disables a particular modified structure run; multiple structure modifications can be processed with a single SolvateAminoAcids run.
+
+- ```noFullStr``` By default, SolvateAminoAcids will use all structure contents to detect clashes of any predicted waters. This option turns that off.
+- ```noHydro``` Should SolvateAminoAcids produce another set of results ignoring the hydrogen atoms clashes with the predicted waters?
+- ```noWaters``` Should SolvateAminoAcids produce another set of results ignoring the already present water molecule clashes with the predicted waters?
+- ```noLigand``` Should SolvateAminoAcids produce another set of results ignoring the ligand molecule clashes with the predicted waters?
+
 
 ## Dependencies
 
