@@ -30,7 +30,7 @@ import os                                             ### Checking for file exis
 
 ######################################################
 # Description
-parserDesc                                            = """Solvate is a Python language module for assigning water molecules to macromolecular structures.
+parserDesc                                            = """Solvate is a Python language module for predicting water molecules in macromolecular structures.
 
 Solvate uses a method for fast addition of water molecules to pdb files which may not have any
 water molecules or which do not have all water molecules added yet. The method is as described
