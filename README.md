@@ -14,6 +14,11 @@ SolvateAminoAcids uses a method for fast addition of water molecules to pdb file
 - [Index](#index)
 - [Obtaining SolvateAminoAcids](#obtaining-solvateaminoacids)
 - [Usage](#usage)
+    -[Help dialogue](#help-dialogue)
+    -[Default run](#default-run)
+    -[More options](#more-options)
+- [Description](#description)
+- [Dependencies](#dependencies)
 - [People behind SolvateAminoAcids](#people-behind-solvateaminoacids)
     - [Authors](#authors)
     - [Copyright](#copyright)
@@ -21,9 +26,54 @@ SolvateAminoAcids uses a method for fast addition of water molecules to pdb file
 
 ## Obtaining SolvateAminoAcids
 
-SolvateAminoAcids 
+The latest version of SolvateAminoAcids can be cloned from its GitHub repository 
+
+    https://github.com/michaltykac/SolvateAminoAcids
 
 ## Usage
+
+### Help dialogue
+
+After the GitHub repository has been cloned onto your machine, solvate can be started by running the top-level python script file called *solvate.py* from the command line.
+
+    python ./solvate.py -h
+    
+This command will display the *help* screen for running the SolvateAminoAcids script in the standard GNU format. 
+
+### Default run
+
+Now, assuming that we have a macromolecular co-ordinates structure in the PDB format, for example 1LFA ( available from http://www.rcsb.org/structure/1LFA ), that you have copied into a folder called *solvateaa_test*, you can supply this structure to the solvate script by issuing the following command:
+
+    python /path/to/SolvateAminoAcids/folded/solvate.py -i ./1lfa.pdb --frag /path/to/SolvateAminoAcids/folded/fragData --res /path/to/SolvateAminoAcids/folded/resData
+    
+where the *--frag* and the *--res* command line options could be avoided if the current working directory is the same as */path/to/SolvateAminoAcids/folded*. 
+
+The result of this command will be a default run of SolvateAminoAcids script, which will give following output
+
+    ... Starting to read structure ./1lfa.pdb
+    ... Starting to parse structure for speed-up
+    ... Starting fragment matching
+    ... Starting water prediction
+    ... Removing clashes between new waters and structure contents
+    ... Clustering predicted non-clashing water molecules
+    ... Started combining and adding waters.
+    ... Writing out the modified co-ordinate files
+    
+And which will create the *solvate_log.txt* file containing the log for the run and also the *solvate_fullStructure_waters.pdb* file, which is a macromolecular co-ordinate file with identical protein structure to the input file (*1lfa.pdb*), but containing the predicted water molecules. The following picture shows the original structure on the left and the new structure with predicted waters on the right.
+
+![](https://github.com/michaltykac/proshade/blob/experimental/Logo_small.png)
+
+### More options
+
+While the 
+
+## Dependencies
+
+SolvateAminoAcids requires a few python modules to be installed in order to work. They can all be installed from their respective PyPi repositories:
+
+- **numpy** ( *python -m pip install numpy* )
+- **sklearn** ( *python -m pip install sklearn* )
+- **gemmi** ( *python -m pip install gemmi* )
 
 ## People behind SolvateAminoAcids
 

@@ -27,8 +27,8 @@
 #   \author    Michal Tykac
 #   \author    Lada Biedermannová
 #   \author    Jiří Černý
-#   \version   0.0.2
-#   \date      SEP 2020
+#   \version   0.1.0
+#   \date      DEC 2020
 ######################################################
 
 ######################################################
